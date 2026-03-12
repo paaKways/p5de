@@ -1,0 +1,54 @@
+# Milestone 1 Foundation Record
+
+## Milestone
+- Name: Milestone 1 - Sketch Catalog Foundation
+- Source: `docs/IMPLEMENTATION_PLAN.md`
+- Last updated: 2026-03-12
+
+## Scope Covered In This Foundation Step
+- [x] Implement `Sketch` aggregate and `SketchName` value object.
+- [x] Define repository contracts for catalog CRUD/list/search.
+- [x] Implement core application use cases:
+  - `CreateSketch`
+  - `RenameSketch`
+  - `DeleteSketch`
+  - `ListSketches`
+  - `SearchSketches`
+- [x] Add Drift schema + DAO + repository implementation baseline.
+- [x] Wire sketch catalog dependencies into app DI.
+- [x] Add initial unit tests for domain/application.
+
+## Evidence
+- Domain:
+  - `lib/contexts/sketch_catalog/domain/sketch.dart`
+  - `lib/contexts/sketch_catalog/domain/sketch_name.dart`
+  - `lib/contexts/sketch_catalog/domain/sketch_repository.dart`
+- Application:
+  - `lib/contexts/sketch_catalog/application/create_sketch.dart`
+  - `lib/contexts/sketch_catalog/application/rename_sketch.dart`
+  - `lib/contexts/sketch_catalog/application/delete_sketch.dart`
+  - `lib/contexts/sketch_catalog/application/list_sketches.dart`
+  - `lib/contexts/sketch_catalog/application/search_sketches.dart`
+  - `lib/contexts/sketch_catalog/application/sketch_templates.dart`
+- Infrastructure:
+  - `lib/contexts/sketch_catalog/infrastructure/sketch_catalog_database.dart`
+  - `lib/contexts/sketch_catalog/infrastructure/drift_sketch_repository.dart`
+- Shared primitives:
+  - `lib/shared/clock.dart`
+  - `lib/shared/id_generator.dart`
+- DI wiring:
+  - `lib/app/di/app_dependencies.dart`
+- Tests:
+  - `test/contexts/sketch_catalog/domain/sketch_name_test.dart`
+  - `test/contexts/sketch_catalog/application/create_sketch_test.dart`
+
+## Validation Status
+- `flutter pub get`: Passed
+- `dart run build_runner build --delete-conflicting-outputs`: Passed
+- `flutter analyze`: Passed
+- `flutter test`: Passed
+
+## Remaining Milestone 1 Work
+- `SketchCatalogBloc` implementation and tests.
+- Catalog presentation UI for create/list/search/rename/delete flows.
+- Persistence behavior verification through integration-level CRUD tests.
