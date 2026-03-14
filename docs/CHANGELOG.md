@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-03-13
+### Milestone 1 - Persistence Integration (Validated)
+- Made `SketchCatalogDatabase` testable by allowing optional `QueryExecutor` injection.
+- Added integration test for Drift-backed repository persistence across DB reopen:
+  - create + rename in first session
+  - reopen same sqlite file
+  - list/search verification in second session
+  - delete verification after reopen
+- Confirmed local validation passed for:
+  - `flutter analyze`
+  - `flutter test`
+
+### Milestone 1 - Sketch Catalog Presentation (Validated)
+- Added `SketchCatalogBloc` events/state handlers for load/create/rename/delete/search flows.
+- Added minimal `SketchCatalogPage` wired to bloc.
+- Added catalog UI polish:
+  - stable widget keys for UI tests
+  - delete confirmation dialog
+  - readable local timestamp formatting
+- Expanded presentation test coverage:
+  - bloc tests for rename/delete/search/not-found behavior
+  - widget shell assertions for catalog layout and controls
+- Confirmed local validation passed for:
+  - `dart run build_runner build --delete-conflicting-outputs`
+  - `flutter analyze`
+  - `flutter test`
+
 ## 2026-03-12
 ### Milestone 0 - Project Foundation
 - Bootstrapped Flutter app baseline for Android target.

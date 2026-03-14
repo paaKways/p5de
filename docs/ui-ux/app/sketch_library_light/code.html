@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>My Sketches - Sketch Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#256af4",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto bg-white shadow-xl">
+<header class="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-3xl">draw</span>
+<h1 class="text-xl font-bold tracking-tight">My Sketches</h1>
+</div>
+<button class="p-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</header>
+<main class="flex-1 flex flex-col pb-24">
+<div class="px-4 py-4">
+<label class="relative flex items-center w-full group">
+<span class="material-symbols-outlined absolute left-4 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-slate-100 border-none rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all placeholder:text-slate-400" placeholder="Search sketches..." type="text"/>
+</label>
+</div>
+<div class="px-4 mb-4">
+<div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+<button class="px-4 py-1.5 rounded-full bg-primary text-white text-sm font-semibold">All</button>
+<button class="px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors">Recent</button>
+<button class="px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors">Shared</button>
+<button class="px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors">Favorites</button>
+</div>
+</div>
+<div class="px-4 flex flex-col gap-3">
+<div class="group flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
+<div class="size-16 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center overflow-hidden shrink-0 border border-slate-100">
+<div class="w-full h-full bg-cover bg-center" data-alt="Abstract colorful waves p5js sketch thumbnail" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCzzmfQfChBzvK2aVAqmrnYbynycGxBo5sf6aMQYu971T_CfghGG0Oz0T-d1r3RHEDxmulvnnbqvy-IQTqhzWFXjBKudWQDgx6USKbIp7GMenCSFFgEE2KQfFrKn0A0wHeiRrrkQZhTHBibwjrwlL84WN9hG7tSLGEGDU8mnB8SHnTn8pQonIAaOhIB6kjv2xYZ09ahNj2cM2Gpp6N7e2w48EuVJO55k3O37MrFBC1_Fx0pRpTdK4qzuPdQ3Dr1oojHb205cvsl5O9_')"></div>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-semibold text-slate-900 truncate">Interactive Waves</h3>
+<p class="text-xs text-slate-500 mt-0.5">Edited 2 hours ago • p5.js</p>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+<div class="group flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
+<div class="size-16 rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-500/5 flex items-center justify-center overflow-hidden shrink-0 border border-slate-100">
+<div class="w-full h-full bg-cover bg-center" data-alt="Geometric particle system animation thumbnail" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA8McUoEWQieeQEwtODYherdwRTtzyB41t09vg9SNf28nsNvTMyiXneQHNsdJ5v0CABxOgWeQBtRduAL7H2uII5XhrAKN3mOqR-Usp8I518tvI7qlJ2GlCSORBlpi_k0IS5DDN2K8f1lyuJ9hYMhxJR-jnT7d7k2r5SdUp-4m37SUdhWptu73wYBDSUVjWLiQgB0wT0uszi2WfEy3sqTdXyOF1PFjtabN4xBsk0XxrxAsvrNlrVv06ndTf8tyIyMn9ea5wCZNqNSOpU')"></div>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-semibold text-slate-900 truncate">Particle System V2</h3>
+<p class="text-xs text-slate-500 mt-0.5">Edited yesterday • p5.js</p>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+<div class="group flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
+<div class="size-16 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 flex items-center justify-center overflow-hidden shrink-0 border border-slate-100">
+<div class="w-full h-full bg-cover bg-center" data-alt="Recursive tree fractal visual thumbnail" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDbJeM-4WjCm0NAWgpe0aNpFfr94dAfSudTNOS37zB-zg-In0MfKKstbl-JFAN0SXXp4-99_WNUf7CH3X5q-RVR0jtu44zQQZZgsQVaLPVbgddrfTTd9D81yUfsE0-ux2pJCaAfHaoJFNJ337CrCBaf1BkI3gqxQ-1T-C4k18MN_s8QktVDoN8wLSg-n_yYuhT09xmtAfHVFW7o0iXcf-Iv7Daxejh9OfruEUFvbD2J7xOKdBhPmMX2JWmMCP65VXi74TE6O6DQQRua')"></div>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-semibold text-slate-900 truncate">Recursive Tree Fractal</h3>
+<p class="text-xs text-slate-500 mt-0.5">Edited 3 days ago • p5.js</p>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+<div class="group flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
+<div class="size-16 rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-500/5 flex items-center justify-center overflow-hidden shrink-0 border border-slate-100">
+<div class="w-full h-full bg-cover bg-center" data-alt="Audio reactive visualizer pattern thumbnail" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBPTnD5m9Mt5ZOTRbJbDh57x4ZkwZVx9L-NNZ-j8LQec5l709GeK7jwgMQ3fHdtgfH_ILJkf5jX-CJVXZlwPHtHrzvJWy2GEABmmU-vAKaw8Z_KOsTHtKEX1AtZAsWH9pL24m21Y5gfDSeXlMR_fWiOoZwKLP7Ax3A1eCxQIBLqReSAicuTff4btqRAHf2kDGngc_HvBLcDzI1BHoMZ-dXWS0i2OiHjoRKl70lZ4HNpT63_1h3urJCpyKcu7BGv1ftMdD7Q-Isd6_yb')"></div>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-semibold text-slate-900 truncate">Audio Visualizer</h3>
+<p class="text-xs text-slate-500 mt-0.5">Edited Oct 24 • p5.js</p>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+</div>
+</main>
+<button class="fixed bottom-24 right-6 size-14 rounded-full bg-primary text-white shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-20">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+<nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 backdrop-blur-lg border-t border-slate-200 px-6 py-3 flex justify-between items-center z-10">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Sketches</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Explore</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">cloud_upload</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Assets</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Settings</span>
+</a>
+</nav>
+</div>
+</body></html>

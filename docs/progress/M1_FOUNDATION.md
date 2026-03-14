@@ -3,7 +3,7 @@
 ## Milestone
 - Name: Milestone 1 - Sketch Catalog Foundation
 - Source: `docs/IMPLEMENTATION_PLAN.md`
-- Last updated: 2026-03-12
+- Last updated: 2026-03-13
 
 ## Scope Covered In This Foundation Step
 - [x] Implement `Sketch` aggregate and `SketchName` value object.
@@ -17,6 +17,9 @@
 - [x] Add Drift schema + DAO + repository implementation baseline.
 - [x] Wire sketch catalog dependencies into app DI.
 - [x] Add initial unit tests for domain/application.
+- [x] Add `SketchCatalogBloc` with load/create/rename/delete/search events.
+- [x] Add minimal catalog UI wired to bloc.
+- [x] Add presentation tests (bloc + widget shell).
 
 ## Evidence
 - Domain:
@@ -41,6 +44,9 @@
 - Tests:
   - `test/contexts/sketch_catalog/domain/sketch_name_test.dart`
   - `test/contexts/sketch_catalog/application/create_sketch_test.dart`
+  - `test/contexts/sketch_catalog/presentation/sketch_catalog_bloc_test.dart`
+  - `test/widget_test.dart`
+  - `test/contexts/sketch_catalog/infrastructure/drift_sketch_repository_integration_test.dart`
 
 ## Validation Status
 - `flutter pub get`: Passed
@@ -49,6 +55,7 @@
 - `flutter test`: Passed
 
 ## Remaining Milestone 1 Work
-- `SketchCatalogBloc` implementation and tests.
-- Catalog presentation UI for create/list/search/rename/delete flows.
-- Persistence behavior verification through integration-level CRUD tests.
+- End-to-end UX polish and acceptance checks for catalog flow.
+
+## Manual Acceptance
+- Checklist: `docs/progress/M1_ACCEPTANCE_CHECKLIST.md`

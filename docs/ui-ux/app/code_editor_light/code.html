@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mobile Code Editor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "primary": "#256af4",
+                "background-light": "#f5f6f8",
+                "background-dark": "#101622",
+              },
+              fontFamily: {
+                "display": ["Inter"],
+                "mono": ["Fira Code", "monospace"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="relative flex h-screen w-full flex-col overflow-hidden">
+<!-- Top App Bar -->
+<header class="flex items-center bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 justify-between">
+<div class="flex items-center gap-3">
+<button class="text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 p-1 rounded-lg">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight">Code Editor</h2>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined">play_arrow</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-10 w-10 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</header>
+<!-- Tabs Navigation -->
+<nav class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+<div class="flex px-4 overflow-x-auto no-scrollbar">
+<a class="flex items-center gap-2 border-b-2 border-primary px-4 py-3 shrink-0" href="#">
+<span class="material-symbols-outlined text-sm text-yellow-500">javascript</span>
+<span class="text-slate-900 dark:text-slate-100 text-sm font-semibold">sketch.js</span>
+</a>
+<a class="flex items-center gap-2 border-b-2 border-transparent px-4 py-3 shrink-0 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined text-sm text-orange-500">html</span>
+<span class="text-sm font-medium">index.html</span>
+</a>
+<a class="flex items-center gap-2 border-b-2 border-transparent px-4 py-3 shrink-0 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined text-sm text-blue-500">css</span>
+<span class="text-sm font-medium">style.css</span>
+</a>
+</div>
+</nav>
+<!-- Editor Area -->
+<main class="flex-1 flex overflow-hidden bg-white dark:bg-slate-950 font-mono text-[14px] leading-relaxed">
+<!-- Line Numbers -->
+<div class="w-12 flex flex-col items-end pr-3 py-4 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 select-none border-r border-slate-100 dark:border-slate-800">
+<span>1</span>
+<span>2</span>
+<span>3</span>
+<span>4</span>
+<span>5</span>
+<span>6</span>
+<span>7</span>
+<span>8</span>
+<span>9</span>
+<span>10</span>
+<span>11</span>
+</div>
+<!-- Code Content -->
+<div class="flex-1 overflow-y-auto p-4 whitespace-pre outline-none" contenteditable="true" spellcheck="false">
+<span class="text-purple-600 dark:text-purple-400">function</span> <span class="text-blue-600 dark:text-blue-400">setup</span>() {
+  <span class="text-blue-600 dark:text-blue-400">createCanvas</span>(<span class="text-orange-600">400</span>, <span class="text-orange-600">400</span>);
+}
+
+<span class="text-purple-600 dark:text-purple-400">function</span> <span class="text-blue-600 dark:text-blue-400">draw</span>() {
+  <span class="text-blue-600 dark:text-blue-400">background</span>(<span class="text-orange-600">220</span>);
+  <span class="text-slate-500 italic">// Draw a circle at mouse position</span>
+<span class="text-blue-600 dark:text-blue-400">fill</span>(<span class="text-primary">"#256af4"</span>);
+  <span class="text-blue-600 dark:text-blue-400">noStroke</span>();
+  <span class="text-blue-600 dark:text-blue-400">ellipse</span>(mouseX, mouseY, <span class="text-orange-600">50</span>, <span class="text-orange-600">50</span>);
+}</div>
+</main>
+<!-- Specialized Coding Toolbar -->
+<footer class="bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 pb-safe">
+<div class="flex items-center justify-between px-2 overflow-x-auto no-scrollbar py-2 gap-1">
+<button class="flex-1 min-w-[40px] h-10 flex items-center justify-center rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm border border-slate-200 dark:border-slate-700 font-mono font-bold">
+                    {
+                </button>
+<button class="flex-1 min-w-[40px] h-10 flex items-center justify-center rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm border border-slate-200 dark:border-slate-700 font-mono font-bold">
+                    }
+                </button>
+<button class="flex-1 min-w-[40px] h-10 flex items-center justify-center rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm border border-slate-200 dark:border-slate-700 font-mono font-bold">
+                    (
+                </button>
+<button class="flex-1 min-w-[40px] h-10 flex items-center justify-center rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm border border-slate-200 dark:border-slate-700 font-mono font-bold">
+                    )
+                </button>
+<button class="flex-1 min-w-[40px] h-10 flex items-center justify-center rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm border border-slate-200 dark:border-slate-700 font-mono font-bold">
+                    [
+                </button>
+<button class="flex-1 min-w-[40px] h-10 flex items-center justify-center rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm border border-slate-200 dark:border-slate-700 font-mono font-bold">
+                    ]
+                </button>
+<button class="flex-1 min-w-[40px] h-10 flex items-center justify-center rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm border border-slate-200 dark:border-slate-700 font-mono font-bold">
+                    =
+                </button>
+<button class="flex-1 min-w-[40px] h-10 flex items-center justify-center rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm border border-slate-200 dark:border-slate-700 font-mono font-bold">
+                    +
+                </button>
+<button class="flex-1 min-w-[40px] h-10 flex items-center justify-center rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm border border-slate-200 dark:border-slate-700 font-mono font-bold text-lg">
+                    ;
+                </button>
+<button class="flex-1 min-w-[40px] h-10 flex items-center justify-center rounded bg-primary text-white shadow-sm font-mono font-bold">
+<span class="material-symbols-outlined text-sm">keyboard_tab</span>
+</button>
+</div>
+<!-- Contextual Actions -->
+<div class="flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-900">
+<div class="flex items-center gap-4">
+<button class="text-slate-500 hover:text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">search</span>
+<span class="text-xs font-medium">Find</span>
+</button>
+<button class="text-slate-500 hover:text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">terminal</span>
+<span class="text-xs font-medium">Console</span>
+</button>
+</div>
+<div class="text-[10px] text-slate-400 font-mono">
+                    Ln 9, Col 24
+                </div>
+</div>
+</footer>
+</div>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+    </style>
+</body></html>

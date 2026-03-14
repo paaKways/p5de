@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 part 'sketch_catalog_database.g.dart';
 
+// Drift table that persists the sketch aggregate in local SQLite.
 @DataClassName('SketchEntry')
 class SketchEntries extends Table {
   @override
@@ -27,11 +28,13 @@ class SketchEntries extends Table {
   Set<Column<Object>>? get primaryKey => {id};
 
   @override
+  // Enforce case-insensitive uniqueness via pre-normalized value.
   List<Set<Column>> get uniqueKeys => [
-        {nameNormalized},
-      ];
+    {nameNormalized},
+  ];
 }
 
+// DAO encapsulates SQL queries so repository code stays mapping-focused.
 @DriftAccessor(tables: [SketchEntries])
 class SketchDao extends DatabaseAccessor<SketchCatalogDatabase>
     with _$SketchDaoMixin {
@@ -64,9 +67,11 @@ class SketchDao extends DatabaseAccessor<SketchCatalogDatabase>
   }
 
   Future<List<SketchEntry>> list({String? query}) {
+    // Most recently updated sketches first for catalog UX.
     final statement = select(sketchEntries)
       ..orderBy([(tbl) => OrderingTerm.desc(tbl.updatedAt)]);
     if (query != null && query.trim().isNotEmpty) {
+      // Query runs on normalized name for case-insensitive matching.
       final q = '%${query.trim().toLowerCase()}%';
       statement.where((tbl) => tbl.nameNormalized.like(q));
     }
@@ -76,7 +81,8 @@ class SketchDao extends DatabaseAccessor<SketchCatalogDatabase>
 
 @DriftDatabase(tables: [SketchEntries], daos: [SketchDao])
 class SketchCatalogDatabase extends _$SketchCatalogDatabase {
-  SketchCatalogDatabase() : super(_openConnection());
+  SketchCatalogDatabase({QueryExecutor? executor})
+    : super(executor ?? _openConnection());
 
   @override
   int get schemaVersion => 1;
@@ -87,6 +93,7 @@ class SketchCatalogDatabase extends _$SketchCatalogDatabase {
 }
 
 LazyDatabase _openConnection() {
+  // Lazy init avoids touching file system until first DB operation.
   return LazyDatabase(() async {
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/p5de.sqlite');

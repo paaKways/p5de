@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:p5de/app/di/app_dependencies.dart';
+import 'package:p5de/contexts/sketch_catalog/presentation/sketch_catalog_bloc.dart';
+import 'package:p5de/contexts/sketch_catalog/presentation/sketch_catalog_page.dart';
 
 class P5deApp extends StatelessWidget {
   const P5deApp({required this.dependencies, super.key});
@@ -8,24 +11,21 @@ class P5deApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'p5de',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-      ),
-      home: const _BootstrapStatusScreen(),
-    );
-  }
-}
-
-class _BootstrapStatusScreen extends StatelessWidget {
-  const _BootstrapStatusScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: SafeArea(
-        child: Center(child: Text('Milestone 0 foundation ready')),
+    return BlocProvider(
+      create: (_) => SketchCatalogBloc(
+        createSketch: dependencies.createSketch,
+        renameSketch: dependencies.renameSketch,
+        deleteSketch: dependencies.deleteSketch,
+        listSketches: dependencies.listSketches,
+        searchSketches: dependencies.searchSketches,
+      )..add(const SketchCatalogLoaded()),
+      child: MaterialApp(
+        title: 'p5de',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+        ),
+        home: const SketchCatalogPage(),
+        debugShowCheckedModeBanner: false,
       ),
     );
   }

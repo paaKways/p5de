@@ -42,12 +42,14 @@ dependencies:
   firebase_analytics: ^11.5.0
   firebase_crashlytics: ^4.3.0
   uuid: ^4.5.1
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^6.0.0
+  bloc_test: ^10.0.0
   build_runner: ^2.6.0
   drift_dev: ^2.29.0
 
@@ -92,3 +94,4 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+

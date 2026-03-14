@@ -4,6 +4,7 @@ import 'package:p5de/contexts/sketch_catalog/domain/sketch_name.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/sketch_catalog_database.dart';
 
+// Repository adapter between domain contracts and Drift persistence.
 class DriftSketchRepository implements SketchRepository {
   DriftSketchRepository(this._database);
 
@@ -38,6 +39,7 @@ class DriftSketchRepository implements SketchRepository {
   @override
   Future<List<Sketch>> list({String? query}) async {
     final rows = await _dao.list(query: query);
+    // Keep domain layer independent from generated Drift row types.
     return rows.map(_toDomain).toList(growable: false);
   }
 
@@ -46,6 +48,7 @@ class DriftSketchRepository implements SketchRepository {
     String normalizedName, {
     String? excludingSketchId,
   }) async {
+    // Exclusion is used during rename to ignore the current sketch row.
     final row = await _dao.findByNormalizedName(normalizedName);
     if (row == null) {
       return false;
@@ -57,6 +60,7 @@ class DriftSketchRepository implements SketchRepository {
   }
 
   SketchEntriesCompanion _toCompanion(Sketch sketch) {
+    // Persist normalized name to support case-insensitive uniqueness/search.
     return SketchEntriesCompanion(
       id: Value(sketch.id),
       name: Value(sketch.name.value),

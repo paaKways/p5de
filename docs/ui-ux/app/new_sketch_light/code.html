@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>New Sketch Dialog</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#256af4",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display flex items-center justify-center min-h-screen p-4">
+<!-- Modal Container -->
+<div class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+<!-- BottomSheetHandle Style Header for the Modal -->
+<div class="flex flex-col items-stretch">
+<div class="flex h-6 w-full items-center justify-center pt-2">
+<div class="h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+</div>
+<div class="px-6 pt-6 pb-4">
+<div class="flex items-center justify-between mb-2">
+<h1 class="text-slate-900 dark:text-slate-100 text-2xl font-bold tracking-tight">New Sketch</h1>
+<button class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Create a new workspace to start your design journey.</p>
+</div>
+</div>
+<!-- Form Content -->
+<div class="px-6 py-4 space-y-6">
+<!-- Sketch Name Input -->
+<div class="flex flex-col gap-2">
+<label class="text-slate-900 dark:text-slate-100 text-sm font-semibold" for="sketch-name">Sketch name</label>
+<div class="relative">
+<input class="form-input flex w-full rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary h-12 px-4 text-base transition-all" id="sketch-name" placeholder="Enter sketch name..." type="text" value="My Awesome Project"/>
+</div>
+</div>
+<!-- Template Selection -->
+<div class="flex flex-col gap-3">
+<h3 class="text-slate-900 dark:text-slate-100 text-sm font-semibold">Select a template</h3>
+<div class="grid gap-3">
+<!-- Blank Template Option -->
+<label class="group relative flex items-center justify-between cursor-pointer rounded-lg border border-slate-200 dark:border-slate-700 p-4 hover:border-primary/50 transition-all bg-white dark:bg-slate-800">
+<input checked="" class="peer hidden" name="template" type="radio"/>
+<div class="flex items-center gap-4">
+<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">check_box_outline_blank</span>
+</div>
+<div class="flex flex-col">
+<span class="text-slate-900 dark:text-slate-100 text-sm font-bold">Blank</span>
+<span class="text-slate-500 dark:text-slate-400 text-xs">Start with a clean canvas</span>
+</div>
+</div>
+<div class="h-5 w-5 rounded-full border-2 border-slate-300 dark:border-slate-600 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-all">
+<div class="h-2 w-2 rounded-full bg-white scale-0 peer-checked:scale-100 transition-transform"></div>
+</div>
+<div class="absolute inset-0 rounded-lg border-2 border-primary opacity-0 peer-checked:opacity-100 pointer-events-none"></div>
+</label>
+<!-- Default Starter Template Option -->
+<label class="group relative flex items-center justify-between cursor-pointer rounded-lg border border-slate-200 dark:border-slate-700 p-4 hover:border-primary/50 transition-all bg-white dark:bg-slate-800">
+<input class="peer hidden" name="template" type="radio"/>
+<div class="flex items-center gap-4">
+<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">dashboard_customize</span>
+</div>
+<div class="flex flex-col">
+<span class="text-slate-900 dark:text-slate-100 text-sm font-bold">Default Starter</span>
+<span class="text-slate-500 dark:text-slate-400 text-xs">Pre-configured layers and guides</span>
+</div>
+</div>
+<div class="h-5 w-5 rounded-full border-2 border-slate-300 dark:border-slate-600 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center transition-all">
+<div class="h-2 w-2 rounded-full bg-white scale-0 peer-checked:scale-100 transition-transform"></div>
+</div>
+<div class="absolute inset-0 rounded-lg border-2 border-primary opacity-0 peer-checked:opacity-100 pointer-events-none"></div>
+</label>
+</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex items-center justify-end gap-3 px-6 py-6 bg-slate-50 dark:bg-slate-800/50 mt-4">
+<button class="px-5 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                Cancel
+            </button>
+<button class="px-6 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary/90 rounded-lg shadow-sm shadow-primary/20 transition-all flex items-center gap-2">
+<span>Create Sketch</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</body></html>
