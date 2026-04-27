@@ -36,13 +36,31 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
     );
   }
 
-  Future<void> insertText(String text) async {
+  Future<void> insertText(String text, {int? cursorOffset}) async {
+    if (!_ready) {
+      return;
+    }
+    final offsetArgument = cursorOffset == null ? '' : ', $cursorOffset';
+    await _controller?.evaluateJavascript(
+      source:
+          'window.P5deEditor.insertText(${jsonEncode(text)}$offsetArgument);',
+    );
+  }
+
+  Future<void> runCommand(String command) async {
     if (!_ready) {
       return;
     }
     await _controller?.evaluateJavascript(
-      source: 'window.P5deEditor.insertText(${jsonEncode(text)});',
+      source: 'window.P5deEditor.runCommand(${jsonEncode(command)});',
     );
+  }
+
+  Future<void> focusEditor() async {
+    if (!_ready) {
+      return;
+    }
+    await _controller?.evaluateJavascript(source: 'window.P5deEditor.focus();');
   }
 
   void _registerBridgeHandlers(InAppWebViewController controller) {

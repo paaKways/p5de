@@ -32,7 +32,6 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       GlobalKey<CodeMirrorEditorViewState>();
   late Sketch _sketch;
   Timer? _autosaveTimer;
-  bool _editorReady = false;
   int _line = 1;
   int _column = 1;
 
@@ -67,13 +66,6 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _setEditorCode(String code) async {
-    if (!_editorReady) {
-      return;
-    }
-    await _editorKey.currentState?.setCode(code);
-  }
-
   void _requestSave() {
     _autosaveTimer?.cancel();
     if (_bloc.state.isDirty && !_bloc.state.isSaving) {
@@ -82,13 +74,23 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   }
 
   Future<void> _insertTextAtSelection(String value) async {
-    await _editorKey.currentState?.insertText(value);
+    final pair = switch (value) {
+      '{' => ('{}', 1),
+      '(' => ('()', 1),
+      '[' => ('[]', 1),
+      _ => (value, value.length),
+    };
+    await _editorKey.currentState?.insertText(pair.$1, cursorOffset: pair.$2);
   }
 
-  void _handleEditorReady() {
-    if (mounted) {
-      setState(() => _editorReady = true);
-    }
+  void _handleEditorReady() {}
+
+  Future<void> _runEditorCommand(String command) async {
+    await _editorKey.currentState?.runCommand(command);
+  }
+
+  Future<void> _focusEditor() async {
+    await _editorKey.currentState?.focusEditor();
   }
 
   void _handleEditorChanged(String code) {
@@ -118,9 +120,6 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
         final savedSketch = state.savedSketch;
         if (savedSketch != null && savedSketch != _sketch) {
           _sketch = savedSketch;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Sketch saved.')));
         }
 
         final errorMessage = state.errorMessage;
@@ -128,13 +127,6 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(errorMessage)));
-        }
-
-        final draft = state.draft;
-        if (draft != null &&
-            _editorReady &&
-            draft.currentCode == draft.savedCode) {
-          _setEditorCode(draft.currentCode);
         }
       },
       builder: (context, state) {
@@ -170,6 +162,16 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24),
               ),
               actions: [
+                IconButton(
+                  tooltip: 'Undo',
+                  icon: const Icon(Icons.undo),
+                  onPressed: () => _runEditorCommand('undo'),
+                ),
+                IconButton(
+                  tooltip: 'Redo',
+                  icon: const Icon(Icons.redo),
+                  onPressed: () => _runEditorCommand('redo'),
+                ),
                 IconButton(
                   tooltip: 'Run',
                   icon: const Icon(Icons.play_arrow),
@@ -215,7 +217,12 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                   ),
                 ),
                 _EditorKeyboardToolbar(onInsert: _insertTextAtSelection),
-                _EditorBottomActions(line: _line, column: _column),
+                _EditorBottomActions(
+                  line: _line,
+                  column: _column,
+                  onFind: () => _runEditorCommand('find'),
+                  onConsole: _focusEditor,
+                ),
               ],
             ),
           ),
@@ -429,10 +436,17 @@ class _EditorKeyboardToolbar extends StatelessWidget {
 }
 
 class _EditorBottomActions extends StatelessWidget {
-  const _EditorBottomActions({required this.line, required this.column});
+  const _EditorBottomActions({
+    required this.line,
+    required this.column,
+    required this.onFind,
+    required this.onConsole,
+  });
 
   final int line;
   final int column;
+  final VoidCallback onFind;
+  final VoidCallback onConsole;
 
   @override
   Widget build(BuildContext context) {
@@ -441,25 +455,47 @@ class _EditorBottomActions extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
       child: Row(
         children: [
-          const Icon(Icons.search, color: Color(0xFF64748B)),
-          const SizedBox(width: 8),
-          Text(
-            'Find',
-            style: const TextStyle(
-              color: Color(0xFF64748B),
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+          InkWell(
+            onTap: onFind,
+            borderRadius: BorderRadius.circular(8),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Row(
+                children: [
+                  Icon(Icons.search, color: Color(0xFF64748B)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Find',
+                    style: TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 22),
-          const Icon(Icons.terminal, color: Color(0xFF64748B)),
-          const SizedBox(width: 8),
-          Text(
-            'Console',
-            style: const TextStyle(
-              color: Color(0xFF64748B),
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+          InkWell(
+            onTap: onConsole,
+            borderRadius: BorderRadius.circular(8),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Row(
+                children: [
+                  Icon(Icons.terminal, color: Color(0xFF64748B)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Console',
+                    style: TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const Spacer(),

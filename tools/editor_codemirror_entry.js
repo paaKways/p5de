@@ -1,4 +1,10 @@
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  redo,
+  undo,
+} from "@codemirror/commands";
 import { javascript } from "@codemirror/lang-javascript";
 import { java } from "@codemirror/lang-java";
 import {
@@ -7,8 +13,8 @@ import {
   indentOnInput,
   syntaxHighlighting,
 } from "@codemirror/language";
-import { search, searchKeymap } from "@codemirror/search";
-import { EditorState } from "@codemirror/state";
+import { openSearchPanel, search, searchKeymap } from "@codemirror/search";
+import { EditorState, Transaction } from "@codemirror/state";
 import {
   EditorView,
   drawSelection,
@@ -34,7 +40,10 @@ function postMessage(name, payload) {
     window.flutter_inappwebview.callHandler(name, message);
     return;
   }
-  window.parent?.postMessage({ name, payload }, "*");
+  window.parent?.postMessage(
+    JSON.stringify({ source: "p5de-codemirror", name, payload }),
+    "*",
+  );
 }
 
 function notifyCursor() {
@@ -110,10 +119,19 @@ function getCode() {
   return view?.state.doc.toString() || "";
 }
 
-function insertText(text) {
+function insertText(text, cursorOffset) {
   if (!view) return;
-  const transaction = view.state.replaceSelection(text || "");
-  view.dispatch(transaction);
+  const inserted = text || "";
+  const offset =
+    Number.isInteger(cursorOffset) && cursorOffset >= 0
+      ? cursorOffset
+      : inserted.length;
+  const selection = view.state.selection.main;
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: inserted },
+    selection: { anchor: selection.from + offset },
+    annotations: Transaction.userEvent.of("input.type"),
+  });
   view.focus();
 }
 
@@ -121,16 +139,33 @@ function focus() {
   view?.focus();
 }
 
+function runCommand(command) {
+  if (!view) return;
+  if (command === "undo") {
+    undo(view);
+  }
+  if (command === "redo") {
+    redo(view);
+  }
+  if (command === "find") {
+    openSearchPanel(view);
+  }
+  view.focus();
+  notifyCursor();
+}
+
 window.P5deEditor = {
   createEditor,
   focus,
   getCode,
   insertText,
+  runCommand,
   setCode,
 };
 
 window.addEventListener("message", (event) => {
-  const data = event.data || {};
+  const data =
+    typeof event.data === "string" ? JSON.parse(event.data) : event.data || {};
   if (data.source !== "p5de-flutter") return;
 
   const payload = data.payload || {};
@@ -141,7 +176,10 @@ window.addEventListener("message", (event) => {
     setCode(payload.code || "");
   }
   if (data.command === "insertText") {
-    insertText(payload.text || "");
+    insertText(payload.text || "", payload.cursorOffset);
+  }
+  if (data.command === "runCommand") {
+    runCommand(payload.command || "");
   }
   if (data.command === "focus") {
     focus();

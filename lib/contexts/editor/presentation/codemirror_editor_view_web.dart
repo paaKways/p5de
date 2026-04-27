@@ -59,8 +59,20 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
     _postCommand('setCode', {'code': code});
   }
 
-  Future<void> insertText(String text) async {
-    _postCommand('insertText', {'text': text});
+  Future<void> insertText(String text, {int? cursorOffset}) async {
+    final payload = <String, Object?>{'text': text};
+    if (cursorOffset != null) {
+      payload['cursorOffset'] = cursorOffset;
+    }
+    _postCommand('insertText', payload);
+  }
+
+  Future<void> runCommand(String command) async {
+    _postCommand('runCommand', {'command': command});
+  }
+
+  Future<void> focusEditor() async {
+    _postCommand('focus', const {});
   }
 
   void _createEditor() {
@@ -71,19 +83,19 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
   }
 
   void _postCommand(String command, Map<String, Object?> payload) {
-    _iframe.contentWindow?.postMessage({
-      'source': 'p5de-flutter',
-      'command': command,
-      'payload': payload,
-    }, '*');
+    _iframe.contentWindow?.postMessage(
+      jsonEncode({
+        'source': 'p5de-flutter',
+        'command': command,
+        'payload': payload,
+      }),
+      '*',
+    );
   }
 
   void _handleMessage(html.MessageEvent event) {
-    if (event.source != _iframe.contentWindow) {
-      return;
-    }
-    final data = event.data;
-    if (data is! Map) {
+    final data = _normalizePayload(event.data);
+    if (data['source'] != 'p5de-codemirror') {
       return;
     }
     final name = data['name'];
