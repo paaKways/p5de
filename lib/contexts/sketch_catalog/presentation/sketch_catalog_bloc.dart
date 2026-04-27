@@ -7,6 +7,7 @@ import 'package:p5de/contexts/sketch_catalog/application/rename_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/search_sketches.dart';
 import 'package:p5de/contexts/sketch_catalog/application/sketch_templates.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_name.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
 
@@ -59,7 +60,12 @@ class SketchCatalogBloc extends Bloc<SketchCatalogEvent, SketchCatalogState> {
     Emitter<SketchCatalogState> emit,
   ) async {
     try {
-      await _createSketch(name: event.name, code: event.code ?? kDefaultSketchTemplate);
+      final language = event.language ?? SketchLanguage.p5js;
+      await _createSketch(
+        name: event.name,
+        language: language,
+        code: event.code ?? defaultSketchTemplateFor(language),
+      );
       await _refresh(emit, query: state.query);
     } catch (error) {
       emit(state.copyWith(errorMessage: _mapError(error)));
@@ -133,4 +139,3 @@ class SketchCatalogBloc extends Bloc<SketchCatalogEvent, SketchCatalogState> {
     return 'Unexpected error. Please try again.';
   }
 }
-

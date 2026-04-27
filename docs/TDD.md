@@ -1,5 +1,5 @@
 # Technical Design Document (TDD)
-## Product: Mobile p5.js Editor & Runtime App
+## Product: Mobile Processing Java and p5.js Editor & Runtime App
 ## Linked PRD: PRD.md
 ## Version: 1.1 (MVP Baseline - Flutter)
 ## Date: March 12, 2026
@@ -21,8 +21,8 @@ Out of scope:
 | PRD Requirement | Technical Approach | Status | Notes |
 |---|---|---|---|
 | Sketch CRUD | Drift (SQLite)-backed aggregate repository + BLoC-driven Flutter presentation | Baseline selected | Offline-first local storage |
-| Editor features | `flutter_inappwebview` hosting CodeMirror 6 with Dart-JS bridge | Baseline selected | Mobile-friendly editing with syntax highlighting |
-| Runtime run/stop/restart | Separate sandboxed InAppWebView loading local HTML shell + bundled p5.js | Baseline selected | Hard reset by reload on Stop/Restart |
+| Editor features | `flutter_inappwebview` hosting CodeMirror 6 with Dart-JS bridge | Baseline selected | Mobile-friendly editing with Processing Java and JavaScript syntax highlighting |
+| Runtime run/stop/restart | Separate sandboxed runtime WebView loading either bundled p5.js assets or bundled Processing Java WASM runtime assets | Baseline selected | Hard reset by reload on Stop/Restart |
 | Mobile viewport adaptation | Runtime shell uses `resizeCanvas` + `windowResized`; Flutter handles orientation and insets | Baseline selected | Full-screen default, fit mode setting later |
 | Offline support | Bundle p5.js and runtime/editor assets in app package; no network dependency | Baseline selected | Full create/edit/run/delete works offline |
 
@@ -41,16 +41,18 @@ Out of scope:
   - WebView plugin complexity and platform-channel debugging overhead.
   - Additional work to ensure Android WebView behavior is tuned for runtime/editor use.
 
-### 4.2 Runtime Layer (p5 Execution)
+### 4.2 Runtime Layer
 - Candidate options:
-  - Embedded WebView + local asset injection
+  - Embedded WebView + local asset injection for p5.js
+  - Embedded WebView + bundled WASM Processing Java runtime for Processing sketches
   - Custom JS engine wrapper
-- Selected option: `flutter_inappwebview` + local runtime HTML shell
+- Selected option: `flutter_inappwebview` + local runtime HTML shells for p5.js and Processing Java WASM
 - Security model:
   - JavaScript enabled only in editor/runtime webviews.
   - Dart-JS bridge limited to minimal audited message handlers.
   - Runtime blocks external navigation/resource loads by default in MVP.
   - No broad native APIs exposed to user scripts.
+  - Processing Java runs through bundled WASM runtime assets, not a native JVM or arbitrary native execution path.
 
 ### 4.3 Editor Component
 - Candidate options:
@@ -58,7 +60,7 @@ Out of scope:
   - WebView-hosted CodeMirror 6
 - Selected option: WebView-hosted CodeMirror 6
 - Required capabilities mapping:
-  - Syntax highlighting: CodeMirror JavaScript language package
+  - Syntax highlighting: CodeMirror JavaScript language package and Processing/Java-compatible highlighting mode
   - Undo/redo: CodeMirror history extension
   - Find in file: CodeMirror search extension with Flutter toolbar actions
 
@@ -95,13 +97,13 @@ Bounded contexts and module boundaries:
 - `lib/contexts/editor`
   - `presentation`: editor UI, autosave indicators, `EditorBloc`
   - `application`: use cases (`LoadSketchForEdit`, `UpdateDraft`, `SaveSketch`)
-  - `domain`: editor draft policies and validation rules
-  - `infrastructure`: CodeMirror bridge adapter and local draft persistence adapter
+  - `domain`: editor draft policies, sketch language metadata, and validation rules
+  - `infrastructure`: CodeMirror bridge adapter, language mode configuration, and local draft persistence adapter
 - `lib/contexts/runtime_preview`
   - `presentation`: runtime preview UI, run state, console panel, `RuntimeBloc`
   - `application`: use cases (`RunSketch`, `StopSketch`, `RestartSketch`)
-  - `domain`: runtime session model, error model, watchdog policy
-  - `infrastructure`: InAppWebView runtime adapter, JS bridge parser
+  - `domain`: runtime session model, runtime target, error model, watchdog policy
+  - `infrastructure`: p5.js WebView runtime adapter, Processing Java WASM runtime adapter, JS bridge parser
 - `lib/shared`
   - cross-context primitives (result types, clock/uuid ports, logging contracts)
 
@@ -113,6 +115,7 @@ Architecture diagram reference:
 - `Sketch`
   - `id: String` (UUID)
   - `name: String`
+  - `language: SketchLanguage` (`processingJava` or `p5js`)
   - `code: String`
   - `createdAt: int` (epoch ms)
   - `updatedAt: int` (epoch ms)
@@ -120,6 +123,7 @@ Architecture diagram reference:
 ### 6.2 Constraints
 - Unique sketch name (case-insensitive) enforced at repository layer and DB index.
 - Non-empty code not required; new sketches initialized with starter template.
+- Sketch language/runtime target is immutable after creation for MVP to keep editor and runtime assumptions simple.
 
 ### 6.3 Migration Strategy
 - Schema versioning approach:
@@ -130,10 +134,11 @@ Architecture diagram reference:
 
 ## 7. Runtime Design
 - Script packaging/injection flow:
-  1. Editor returns in-memory code snapshot through JS bridge.
-  2. Runtime module escapes/injects code into local HTML shell template.
-  3. Runtime webview loads content with asset base URL.
-  4. Bundled `p5.min.js` loaded from app assets.
+  1. Editor returns in-memory code snapshot and sketch language through JS bridge.
+  2. Runtime module selects the p5.js shell or Processing Java WASM shell based on sketch language.
+  3. For p5.js, runtime escapes/injects `sketch.js` into the local HTML shell and loads bundled `p5.min.js` from app assets.
+  4. For Processing Java, runtime passes `Sketch.pde` code into the bundled WASM Processing Java runtime loader.
+  5. Runtime webview loads content with an app-controlled asset base URL.
 - Run lifecycle states: `idle -> starting -> running -> error -> stopped`
 - Stop strategy (including long-loop handling):
   - Stop triggers `stopLoading()` + load blank shell.
@@ -142,6 +147,7 @@ Architecture diagram reference:
 - Console and error line mapping:
   - Inject global `window.onerror` + `unhandledrejection` hooks.
   - Parse stack traces and map to `sketch.js` virtual line offsets.
+  - Parse Processing Java compile/runtime diagnostics from the WASM runtime and map to `Sketch.pde` lines where metadata is available.
 
 ## 8. Mobile Viewport Strategy
 - Canvas sizing mode(s):
@@ -217,6 +223,7 @@ Architecture diagram reference:
 
 ## 14. Risks and Technical Mitigations
 - Runtime inconsistencies across Android WebView versions -> maintain device/API test matrix and fallback compatibility mode.
+- Processing Java WASM startup time, APK size, and diagnostic quality -> benchmark cold/warm start, track packaged asset size, and define best-effort line mapping for MVP.
 - Editor performance regressions -> enforce extension budget and benchmark typing latency before releases.
 - User script hangs -> watchdog detection + force restart UX + full reload recovery.
 

@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_name.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/sketch_catalog_database.dart';
@@ -65,6 +66,7 @@ class DriftSketchRepository implements SketchRepository {
       id: Value(sketch.id),
       name: Value(sketch.name.value),
       nameNormalized: Value(sketch.name.normalized),
+      language: Value(sketch.language.storageValue),
       code: Value(sketch.code),
       createdAt: Value(sketch.createdAt),
       updatedAt: Value(sketch.updatedAt),
@@ -75,6 +77,7 @@ class DriftSketchRepository implements SketchRepository {
     return Sketch(
       id: row.id,
       name: SketchName(row.name),
+      language: SketchLanguage.fromStorageValue(row.language),
       code: row.code,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

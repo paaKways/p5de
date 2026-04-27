@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_name.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -107,6 +108,10 @@ class WebLocalStorageSketchRepository implements SketchRepository {
               return Sketch(
                 id: map['id'] as String,
                 name: SketchName(map['name'] as String),
+                language: SketchLanguage.fromStorageValue(
+                  map['language'] as String? ??
+                      SketchLanguage.p5js.storageValue,
+                ),
                 code: map['code'] as String,
                 createdAt: map['createdAt'] as int,
                 updatedAt: map['updatedAt'] as int,
@@ -130,6 +135,7 @@ class WebLocalStorageSketchRepository implements SketchRepository {
           (item) => <String, Object>{
             'id': item.id,
             'name': item.name.value,
+            'language': item.language.storageValue,
             'code': item.code,
             'createdAt': item.createdAt,
             'updatedAt': item.updatedAt,

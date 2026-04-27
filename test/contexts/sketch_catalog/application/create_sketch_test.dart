@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:p5de/contexts/sketch_catalog/application/create_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
 import 'package:p5de/shared/clock.dart';
 import 'package:p5de/shared/id_generator.dart';
@@ -19,7 +20,26 @@ void main() {
 
       expect(created.id, 'id-123');
       expect(created.name.value, 'Hello World');
+      expect(created.language, SketchLanguage.p5js);
       expect(repository.items, hasLength(1));
+    });
+
+    test('creates Processing Java sketch with default PDE template', () async {
+      final repository = _InMemorySketchRepository();
+      final useCase = CreateSketch(
+        repository: repository,
+        idGenerator: _FakeIdGenerator('id-pde'),
+        clock: _FakeClock(DateTime.fromMillisecondsSinceEpoch(1000)),
+      );
+
+      final created = await useCase.call(
+        name: 'Processing Sketch',
+        language: SketchLanguage.processingJava,
+      );
+
+      expect(created.language, SketchLanguage.processingJava);
+      expect(created.code, contains('void setup()'));
+      expect(created.code, contains('void draw()'));
     });
 
     test('throws on duplicate name', () async {

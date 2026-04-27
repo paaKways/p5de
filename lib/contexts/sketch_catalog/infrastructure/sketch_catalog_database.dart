@@ -18,6 +18,8 @@ class SketchEntries extends Table {
 
   TextColumn get nameNormalized => text().named('name_normalized')();
 
+  TextColumn get language => text().withDefault(const Constant('p5js'))();
+
   TextColumn get code => text()();
 
   IntColumn get createdAt => integer().named('created_at')();
@@ -85,11 +87,17 @@ class SketchCatalogDatabase extends _$SketchCatalogDatabase {
     : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
-  MigrationStrategy get migration =>
-      MigrationStrategy(onCreate: (m) async => m.createAll());
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) async => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(sketchEntries, sketchEntries.language);
+      }
+    },
+  );
 }
 
 LazyDatabase _openConnection() {

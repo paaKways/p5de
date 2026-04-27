@@ -6,6 +6,7 @@ import 'package:p5de/contexts/sketch_catalog/application/list_sketches.dart';
 import 'package:p5de/contexts/sketch_catalog/application/rename_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/search_sketches.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_name.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/presentation/sketch_catalog_bloc.dart';
@@ -64,7 +65,38 @@ void main() {
         isA<SketchCatalogState>()
             .having((s) => s.status, 'status', SketchCatalogStatus.success)
             .having((s) => s.sketches.length, 'count', 1)
-            .having((s) => s.sketches.first.name.value, 'name', 'My Sketch'),
+            .having((s) => s.sketches.first.name.value, 'name', 'My Sketch')
+            .having(
+              (s) => s.sketches.first.language,
+              'language',
+              SketchLanguage.p5js,
+            ),
+      ],
+    );
+
+    blocTest<SketchCatalogBloc, SketchCatalogState>(
+      'creates Processing Java sketch',
+      build: () => bloc,
+      act: (bloc) => bloc.add(
+        const SketchCatalogCreateRequested(
+          'PDE Sketch',
+          language: SketchLanguage.processingJava,
+        ),
+      ),
+      expect: () => [
+        const SketchCatalogState(status: SketchCatalogStatus.loading),
+        isA<SketchCatalogState>()
+            .having((s) => s.status, 'status', SketchCatalogStatus.success)
+            .having(
+              (s) => s.sketches.first.language,
+              'language',
+              SketchLanguage.processingJava,
+            )
+            .having(
+              (s) => s.sketches.first.code,
+              'code',
+              contains('void setup'),
+            ),
       ],
     );
 

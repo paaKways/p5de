@@ -21,13 +21,14 @@ class SketchCatalogQueryChanged extends SketchCatalogEvent {
 }
 
 class SketchCatalogCreateRequested extends SketchCatalogEvent {
-  const SketchCatalogCreateRequested(this.name, {this.code});
+  const SketchCatalogCreateRequested(this.name, {this.language, this.code});
 
   final String name;
+  final SketchLanguage? language;
   final String? code;
 
   @override
-  List<Object?> get props => [name, code];
+  List<Object?> get props => [name, language, code];
 }
 
 class SketchCatalogRenameRequested extends SketchCatalogEvent {

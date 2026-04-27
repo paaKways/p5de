@@ -1,5 +1,5 @@
 # Implementation Plan
-## Product: Mobile p5.js Editor & Runtime App
+## Product: Mobile Processing Java and p5.js Editor & Runtime App
 ## Date: March 12, 2026
 ## Inputs
 - PRD: `PRD.md`
@@ -7,14 +7,14 @@
 - ADRs: `docs/adr/ADR-001..005`
 
 ## 1. Objective
-Deliver the MVP defined in the PRD using the Flutter + DDD + BLoC architecture defined in the TDD, with a working offline create/edit/delete/run experience for p5.js sketches on Android mobile devices.
+Deliver the MVP defined in the PRD using the Flutter + DDD + BLoC architecture defined in the TDD, with a working offline create/edit/delete/run experience for Processing Java and p5.js sketches on Android mobile devices.
 
 ## 2. Delivery Strategy
 Use vertical slices that each ship end-to-end value:
 1. Foundation + Architecture
 2. Sketch Catalog (CRUD)
 3. Editor (CodeMirror + autosave)
-4. Runtime Preview (run/stop/restart + error console)
+4. Runtime Preview (Processing Java WASM + p5.js run/stop/restart + error console)
 5. Hardening (performance, reliability, QA, telemetry)
 
 ## 3. Milestones and Scope
@@ -48,23 +48,26 @@ Scope:
 - Integrate CodeMirror 6 inside InAppWebView.
 - Implement editor bridge adapter and draft model.
 - Implement `EditorBloc` and use cases: `LoadSketchForEdit`, `UpdateDraft`, `SaveSketch`.
+- Add sketch language/runtime selection metadata so drafts can target Processing Java (`Sketch.pde`) or p5.js (`sketch.js`).
 - Implement autosave (debounced and lifecycle-triggered).
 - Add save/dirty-state indicators.
 
 Definition of done:
-- User can open sketch and edit code with syntax highlighting.
+- User can open a Processing Java or p5.js sketch and edit code with syntax highlighting.
 - Autosave works reliably on typing pause and app background.
 - Editor tests cover state transitions and save behavior.
 
 ### Milestone 3: Runtime Preview Slice (Weeks 6-7)
 Scope:
 - Add runtime HTML shell + bundled p5.js assets.
+- Add bundled WASM Processing Java runtime assets and runtime loader shell.
 - Implement runtime adapter, JS bridge handlers, and console/error mapping.
-- Implement `RuntimeBloc` and use cases: `RunSketch`, `StopSketch`, `RestartSketch`.
+- Implement `RuntimeBloc` and use cases: `RunSketch`, `StopSketch`, `RestartSketch`, with runtime dispatch based on sketch language.
 - Add runtime watchdog and unresponsive recovery UX.
+- Map Processing Java compile/runtime diagnostics back to `Sketch.pde` lines where available.
 
 Definition of done:
-- User can run/stop/restart sketches from editor flow.
+- User can run/stop/restart Processing Java and p5.js sketches from editor flow.
 - Errors appear in console with best-effort line mapping.
 - Runtime works offline and survives basic orientation changes.
 
@@ -93,21 +96,21 @@ Definition of done:
 
 ### `editor`
 - Domain:
-  - Draft rules and save policy.
+  - Draft rules, save policy, and sketch language/runtime metadata.
 - Application:
   - load/update/save use cases.
 - Infrastructure:
-  - CodeMirror bridge adapter and draft persistence adapter.
+  - CodeMirror bridge adapter, language mode configuration, and draft persistence adapter.
 - Presentation:
   - `EditorBloc`, editor screen, status indicators.
 
 ### `runtime_preview`
 - Domain:
-  - runtime session model, watchdog policy, runtime error model.
+  - runtime session model, runtime target selection, watchdog policy, runtime error model.
 - Application:
   - run/stop/restart use cases.
 - Infrastructure:
-  - runtime WebView adapter, injected JS error hooks.
+  - p5.js WebView adapter, Processing Java WASM runtime adapter, injected JS/error hooks.
 - Presentation:
   - `RuntimeBloc`, preview/console UI.
 
@@ -121,6 +124,7 @@ Critical path:
 
 Key dependencies:
 - Runtime depends on editor snapshot contract.
+- Processing Java runtime depends on stable WASM asset packaging and a bridge contract for compile/runtime diagnostics.
 - Editor and catalog both depend on repository stability.
 - Telemetry and crash tagging depend on stable event/state model in blocs.
 
@@ -134,8 +138,9 @@ Gate B (post Milestone 2):
 - Autosave reliability under lifecycle transitions
 
 Gate C (post Milestone 3):
-- Run-to-first-frame median <= 1.5s for simple sketches
+- Run-to-first-frame median <= 1.5s for simple p5.js sketches and an explicitly measured target for simple Processing Java WASM sketches
 - No crash on run/stop/restart/orientation baseline scenarios
+- Processing Java compile/runtime errors appear in the console with best-effort line mapping
 
 Gate D (release):
 - All PRD acceptance criteria pass
@@ -147,7 +152,7 @@ Gate D (release):
 - BLoC tests:
   - event/state transitions for catalog, editor, runtime blocs.
 - Integration tests:
-  - full flow: create -> edit -> save -> run -> stop -> delete.
+  - full flow: create -> edit -> save -> run -> stop -> delete for both Processing Java and p5.js sketch types.
 - Device tests:
   - orientation changes, background/foreground, process restart.
 
@@ -158,6 +163,8 @@ Gate D (release):
   - Keep extension set minimal; benchmark before merging large editor changes.
 - Runtime hangs from user scripts:
   - Watchdog + force restart + clear user messaging.
+- Processing Java WASM runtime startup/size risk:
+  - Bundle assets locally, track APK size impact, benchmark cold/warm start, and keep diagnostics mapping best-effort for MVP.
 - Architecture erosion:
   - Enforce dependency rules in code review (no infra imports in domain/application).
 
@@ -186,6 +193,12 @@ Each task should include:
 - linked ADR/TDD section when architecture-impacting
 
 ## 11. Immediate Next Actions
-1. Bootstrap Flutter app and commit baseline project structure.
-2. Implement Drift schema + repository contracts for `Sketch`.
-3. Ship Milestone 1 vertical slice (catalog CRUD + tests).
+1. Start Milestone 2 editor slice:
+   - Add sketch language/runtime metadata to catalog creation.
+   - Implement CodeMirror 6 inside `InAppWebView`.
+   - Add `EditorBloc`, draft autosave, dirty-state tracking, and bridge tests.
+2. Prepare Milestone 3 runtime foundations:
+   - Define p5.js runtime shell asset contract.
+   - Define Processing Java WASM runtime asset layout and Dart-JS bridge contract.
+   - Add first-run performance and diagnostics mapping checkpoints for the WASM runtime.
+3. Keep Milestone 1 catalog regression checks green while editor navigation is introduced.

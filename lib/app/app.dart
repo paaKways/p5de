@@ -24,7 +24,10 @@ class P5deApp extends StatelessWidget {
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         ),
-        home: const SketchCatalogPage(),
+        home: SketchCatalogPage(
+          sketchRepository: dependencies.sketchRepository,
+          clock: dependencies.clock,
+        ),
         debugShowCheckedModeBanner: false,
       ),
     );

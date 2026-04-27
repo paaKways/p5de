@@ -2,10 +2,10 @@
 
 ## Scope
 - Milestone: Sketch Catalog (CRUD)
-- Date:
-- Tester:
-- Device/Emulator:
-- Build/Commit:
+- Date: 2026-04-27 status reconciliation
+- Tester: project team / Codex-assisted review
+- Device/Emulator: Pixel 8 Pro
+- Build/Commit: `dev` branch, `021d07f`
 
 ## Preconditions
 - App installed and launches successfully.
@@ -38,9 +38,9 @@
   - Expected: Deleted sketch does not return.
 
 ## Lifecycle/UX Checks
-- [ ] Rotate device while on catalog screen.
+- [x] Rotate device while on catalog screen.
   - Expected: No crash; state remains usable.
-- [ ] Background and foreground app from catalog screen.
+- [x] Background and foreground app from catalog screen.
   - Expected: No crash; list and search state remain consistent.
 - [x] Empty-state messaging.
   - Expected: Clear "No sketches yet." when catalog is empty.
@@ -49,5 +49,5 @@
 
 ## Result Summary
 - Overall: `Pass`
-- Notes: Tests were done on web so mobile specific tasks were not done but so far everything is okay
-- Follow-up defects/tasks: None
+- Notes: Functional CRUD, persistence, and Android mobile lifecycle checks are complete.
+- Follow-up defects/tasks: None for Milestone 1 acceptance.

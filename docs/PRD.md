@@ -1,23 +1,23 @@
 # Product Requirements Document (PRD)
-## Product: Mobile p5.js Editor & Runtime App
+## Product: Mobile Processing Java and p5.js Editor & Runtime App
 ## Version: 1.0 (MVP)
 ## Date: March 12, 2026
 
 ## 1. Overview
-A mobile-first app that lets users create, edit, organize, and run p5.js sketches directly on Android devices. The app combines a code editor, local project management, and a sandboxed runtime preview optimized for mobile viewports.
+A mobile-first app that lets users create, edit, organize, and run Processing Java and p5.js sketches directly on Android devices. The app combines a code editor, local project management, and a sandboxed runtime preview optimized for mobile viewports.
 
 The primary value is enabling fast creative coding workflows on phones/tablets without needing a desktop environment.
 
 ## 2. Problem Statement
-Current p5.js workflows are desktop/browser-centric and not optimized for mobile coding. Users who want to sketch ideas on the go face friction with:
+Current Processing Java and p5.js workflows are desktop/browser-centric and not optimized for mobile coding. Users who want to sketch ideas on the go face friction with:
 - Poor mobile code editing UX
 - No native project organization
 - Inconsistent preview behavior on small screens
 - Difficulty managing multiple sketches locally
 
 ## 3. Goals
-- Allow users to create, edit, and delete p5.js scripts/projects from a mobile app.
-- Run sketches reliably in a mobile-optimized runtime view.
+- Allow users to create, edit, and delete Processing Java and p5.js scripts/projects from a mobile app.
+- Run Processing Java and p5.js sketches reliably in a mobile-optimized runtime view.
 - Provide a responsive coding and preview experience across common Android screen sizes.
 - Enable offline-first usage for editing and running local scripts.
 
@@ -31,11 +31,11 @@ Current p5.js workflows are desktop/browser-centric and not optimized for mobile
 ## 5. Target Users
 - Students learning creative coding
 - Hobbyist generative artists
-- Educators demonstrating p5.js examples
+- Educators demonstrating Processing Java and p5.js examples
 - Developers prototyping visual ideas quickly on mobile
 
 ## 6. User Stories
-1. As a user, I can create a new p5.js sketch with starter boilerplate so I can begin coding immediately.
+1. As a user, I can create a new Processing Java or p5.js sketch with starter boilerplate so I can begin coding immediately.
 2. As a user, I can view and open my saved sketches from a list.
 3. As a user, I can edit sketch code in a mobile-friendly editor with syntax highlighting.
 4. As a user, I can run a sketch and see output fit properly to my device screen.
@@ -49,7 +49,7 @@ Current p5.js workflows are desktop/browser-centric and not optimized for mobile
 - Create sketch
   - User can create a sketch from:
     - Blank template
-    - Default p5.js starter template (`setup()` + `draw()`)
+    - Default Processing Java and p5.js starter template (`setup()` + `draw()`)
   - Required fields: sketch name (unique in local storage)
 - List sketches
   - Show sketches in a scrollable list with name, last modified time
@@ -62,7 +62,7 @@ Current p5.js workflows are desktop/browser-centric and not optimized for mobile
 
 ### 7.2 Code Editor
 - Editor supports:
-  - JavaScript syntax highlighting
+  - Processing Java and JavaScript syntax highlighting
   - Auto-indentation/basic bracket matching
   - Line numbers
   - Undo/redo
@@ -71,17 +71,24 @@ Current p5.js workflows are desktop/browser-centric and not optimized for mobile
   - Auto-save on pause/background and at fixed debounce interval (e.g., 1 second)
   - Dirty state indicator when unsaved changes exist
 - File model (MVP):
-  - Single script file per sketch (`sketch.js`)
-  - Optional support for `index.html`/`style.css` deferred post-MVP
+  - Single script file per sketch, with runtime-specific default filenames:
+    - Processing Java: `Sketch.pde`
+    - p5.js: `sketch.js`
+  - Optional support for p5.js `index.html`/`style.css` and multi-file Processing sketches deferred post-MVP
 
 ### 7.3 Runtime/Compiler Experience
-- Run action executes current sketch in an isolated WebView runtime.
-- Runtime injects p5.js library and user `sketch.js`.
+- Run action executes current sketch in an isolated runtime view.
+- Runtime supports two MVP-compatible execution targets:
+  - Processing Java through the bundled WASM Processing Java runtime.
+  - p5.js through a bundled local p5.js WebView runtime.
+- Processing Java runtime compiles/interprets user `Sketch.pde` code through the WASM runtime without requiring network access.
+- p5.js runtime injects the bundled p5.js library and user `sketch.js`.
 - Stop action halts execution and clears canvas.
 - Restart action re-runs latest saved or in-memory code.
 - Error handling:
   - Syntax/runtime errors shown in a console panel
   - Error message includes line/column when available
+  - Processing Java diagnostics are mapped back to `Sketch.pde` line numbers where the WASM runtime exposes enough metadata.
 
 ### 7.4 Mobile Viewport Rendering
 - Runtime canvas should adapt to viewport using one of:
@@ -118,7 +125,7 @@ Current p5.js workflows are desktop/browser-centric and not optimized for mobile
 
 ### 8.3 Offline Capability
 - Full create/edit/run/delete workflow must work offline.
-- p5.js runtime dependency should be bundled locally for offline execution.
+- p5.js runtime dependency and the Processing Java WASM runtime should be bundled locally for offline execution.
 
 ### 8.4 Security & Isolation
 - Runtime should restrict dangerous file/system access from user scripts.
@@ -133,7 +140,7 @@ Current p5.js workflows are desktop/browser-centric and not optimized for mobile
 ## 9. MVP Scope
 Included:
 - Local sketch CRUD (create/read/update/delete)
-- Single-file `sketch.js` editing with syntax highlighting
+- Single-file sketch editing with syntax highlighting for `Sketch.pde` and `sketch.js`
 - Run/stop/restart preview
 - Mobile viewport-adaptive rendering
 - Error console with line-level info (best effort)
@@ -154,10 +161,11 @@ Excluded:
 ## 11. Acceptance Criteria (MVP)
 1. User can create a sketch, see it in list, open it, edit code, and save changes.
 2. User can delete a sketch and it is removed from persistent storage.
-3. User can run default p5 template and see animated output on phone screen.
-4. Preview remains functional after orientation change.
-5. Syntax/runtime errors are shown without crashing app.
-6. Relaunching app preserves previously saved sketches.
+3. User can run the default p5.js template and see animated output on phone screen.
+4. User can run the default Processing Java template through the bundled WASM runtime and see animated output on phone screen.
+5. Preview remains functional after orientation change.
+6. Syntax/runtime errors are shown without crashing app.
+7. Relaunching app preserves previously saved sketches.
 
 ## 12. Milestones
 1. Foundation (Week 1-2)
@@ -165,7 +173,7 @@ Excluded:
 2. Editor (Week 3-4)
 - Mobile code editor integration, auto-save, basic search
 3. Runtime (Week 5-6)
-- WebView sandbox, p5 injection, run/stop/restart, error console
+- WebView sandbox, p5 injection, WASM Processing Java runtime integration, run/stop/restart, error console
 4. Viewport Optimization (Week 7)
 - Rotation handling, full-screen fit behavior, perf tuning
 5. Beta Hardening (Week 8)
@@ -174,6 +182,8 @@ Excluded:
 ## 13. Risks & Mitigations
 - Risk: WebView runtime incompatibilities across devices
   - Mitigation: Test matrix across Android API/device profiles; fallback compatibility mode
+- Risk: Processing Java WASM runtime size, startup time, or diagnostics quality misses MVP expectations
+  - Mitigation: Bundle runtime assets locally, measure cold/warm start on target devices, keep a runtime compatibility checklist, and define best-effort diagnostic mapping for MVP
 - Risk: Editor lag on lower-end devices
   - Mitigation: Lightweight editor config; disable heavy features in MVP
 - Risk: User code can freeze UI via expensive loops
@@ -188,6 +198,7 @@ Excluded:
 ## 15. Technical Assumptions (High-Level)
 - The app is mobile-first and targets Android for MVP.
 - A bundled local p5.js runtime is used so preview works offline.
+- A bundled Processing Java WASM runtime is used so Processing sketches run offline on Android without requiring a desktop JVM.
 - Runtime execution occurs in an isolated embedded web runtime (for example, a WebView-based sandbox), but exact implementation is defined in the TDD.
 - Local persistence is required for sketch storage, with exact database/storage technology defined in the TDD.
 - Exact framework, language, and library choices are intentionally deferred to `TDD.md` to keep this PRD implementation-agnostic.

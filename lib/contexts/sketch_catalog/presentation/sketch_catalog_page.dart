@@ -1,12 +1,24 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:p5de/contexts/editor/presentation/editor_page.dart';
 import 'package:p5de/contexts/sketch_catalog/application/sketch_templates.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/web_local_storage_sketch_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/presentation/sketch_catalog_bloc.dart';
+import 'package:p5de/shared/clock.dart';
 
 class SketchCatalogPage extends StatelessWidget {
-  const SketchCatalogPage({super.key});
+  const SketchCatalogPage({
+    required this.sketchRepository,
+    required this.clock,
+    super.key,
+  });
+
+  final SketchRepository sketchRepository;
+  final Clock clock;
 
   @override
   Widget build(BuildContext context) {
@@ -131,6 +143,7 @@ class SketchCatalogPage extends StatelessWidget {
                         ),
                         elevation: 0,
                         child: ListTile(
+                          onTap: () => _openEditor(context, sketch),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 8,
@@ -156,7 +169,7 @@ class SketchCatalogPage extends StatelessWidget {
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           subtitle: Text(
-                            'Edited ${_formatTimestamp(sketch.updatedAt)} • p5.js',
+                            'Edited ${_formatTimestamp(sketch.updatedAt)} - ${sketch.language.displayName}',
                           ),
                           trailing: Wrap(
                             spacing: 2,
@@ -232,6 +245,21 @@ class SketchCatalogPage extends StatelessWidget {
     ).showSnackBar(const SnackBar(content: Text('Web sketch data cleared.')));
   }
 
+  Future<void> _openEditor(BuildContext context, Sketch sketch) async {
+    final updatedSketch = await Navigator.of(context).push<Sketch>(
+      MaterialPageRoute<Sketch>(
+        builder: (_) => EditorPage(
+          sketch: sketch,
+          sketchRepository: sketchRepository,
+          clock: clock,
+        ),
+      ),
+    );
+    if (updatedSketch != null && context.mounted) {
+      context.read<SketchCatalogBloc>().add(const SketchCatalogLoaded());
+    }
+  }
+
   Future<void> _confirmDelete(
     BuildContext context, {
     required String sketchId,
@@ -291,6 +319,7 @@ class SketchCatalogPage extends StatelessWidget {
 
   Future<void> _showCreateDialog(BuildContext context) async {
     final nameController = TextEditingController();
+    var language = SketchLanguage.processingJava;
     var templateChoice = _SketchTemplateChoice.defaultStarter;
 
     await showDialog<void>(
@@ -339,6 +368,30 @@ class SketchCatalogPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     const Text(
+                      'Runtime',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    _LanguageTile(
+                      title: SketchLanguage.processingJava.displayName,
+                      subtitle: 'Bundled WASM Processing runtime',
+                      icon: Icons.memory_outlined,
+                      selected: language == SketchLanguage.processingJava,
+                      onTap: () => setDialogState(
+                        () => language = SketchLanguage.processingJava,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _LanguageTile(
+                      title: SketchLanguage.p5js.displayName,
+                      subtitle: 'Bundled p5.js web runtime',
+                      icon: Icons.javascript_outlined,
+                      selected: language == SketchLanguage.p5js,
+                      onTap: () =>
+                          setDialogState(() => language = SketchLanguage.p5js),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
                       'Select a template',
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
@@ -380,11 +433,12 @@ class SketchCatalogPage extends StatelessWidget {
                   onPressed: () {
                     final code = templateChoice == _SketchTemplateChoice.blank
                         ? ''
-                        : kDefaultSketchTemplate;
+                        : defaultSketchTemplateFor(language);
 
                     context.read<SketchCatalogBloc>().add(
                       SketchCatalogCreateRequested(
                         nameController.text,
+                        language: language,
                         code: code,
                       ),
                     );
@@ -463,6 +517,80 @@ class _FilterChip extends StatelessWidget {
             color: active ? Colors.white : const Color(0xFF475569),
             fontWeight: active ? FontWeight.w700 : FontWeight.w600,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LanguageTile extends StatelessWidget {
+  const _LanguageTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Ink(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFEFF6FF) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? const Color(0xFF256AF4) : const Color(0xFFE2E8F0),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFF256AF4).withValues(alpha: 0.12),
+              ),
+              child: Icon(icon, color: const Color(0xFF256AF4), size: 18),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: selected
+                  ? const Color(0xFF256AF4)
+                  : const Color(0xFF94A3B8),
+            ),
+          ],
         ),
       ),
     );

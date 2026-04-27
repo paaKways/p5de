@@ -3,7 +3,7 @@
 ## Milestone
 - Name: Milestone 0 - Project Foundation
 - Source: `docs/IMPLEMENTATION_PLAN.md`
-- Last updated: 2026-03-12 (post-local verification)
+- Last updated: 2026-04-27 (status reconciled)
 
 ## Scope Checklist
 - [x] Initialize Flutter project and Android target configuration.
@@ -33,7 +33,7 @@
   - `test/widget_test.dart`
 
 ## Definition Of Done Status
-- App builds and runs on target Android emulator/device: In progress (device run confirmation pending).
+- App builds and runs on target Android emulator/device: Done for baseline/dev device install path; ongoing device QA continues in later milestones.
 - CI passes on default branch: In progress (first pipeline run on default branch pending).
 - Folder/module boundaries reflect TDD bounded contexts: Done.
 
@@ -50,7 +50,8 @@ flutter test
 
 ## Risks / Follow-ups
 - Firebase SDKs are added but project-level Firebase initialization and platform configs are not part of Milestone 0 baseline stubs yet.
-- Drift is added but schema/DAO implementation starts in Milestone 1.
+- Drift schema/DAO implementation moved into Milestone 1 and is now present on `dev`.
+- Local Windows tooling needs Flutter 3.41.7 / Dart 3.11.x or newer because the project SDK constraint is `^3.11.1`.
 
 ## Handoff To Milestone 1
-- Next implementation focus: `Sketch` aggregate, repository contracts, and Drift schema in `sketch_catalog` context.
+- Completed on `dev`: `Sketch` aggregate, repository contracts, Drift schema, catalog BLoC, catalog UI, and catalog tests.

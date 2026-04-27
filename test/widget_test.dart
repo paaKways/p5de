@@ -30,7 +30,13 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: BlocProvider.value(value: bloc, child: const SketchCatalogPage()),
+        home: BlocProvider.value(
+          value: bloc,
+          child: SketchCatalogPage(
+            sketchRepository: repository,
+            clock: _FixedClock(),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -61,13 +67,26 @@ class _InMemorySketchRepository implements SketchRepository {
   }
 
   @override
-  Future<Sketch?> findById(String sketchId) async => null;
+  Future<Sketch?> findById(String sketchId) async {
+    for (final item in _items) {
+      if (item.id == sketchId) {
+        return item;
+      }
+    }
+    return null;
+  }
 
   @override
   Future<List<Sketch>> list({String? query}) async => _items;
 
   @override
-  Future<void> update(Sketch sketch) async {}
+  Future<void> update(Sketch sketch) async {
+    final index = _items.indexWhere((item) => item.id == sketch.id);
+    if (index < 0) {
+      throw SketchNotFoundException();
+    }
+    _items[index] = sketch;
+  }
 }
 
 class _FakeIdGenerator implements IdGenerator {

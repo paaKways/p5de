@@ -3,7 +3,7 @@
 ## Milestone
 - Name: Milestone 1 - Sketch Catalog Foundation
 - Source: `docs/IMPLEMENTATION_PLAN.md`
-- Last updated: 2026-03-13
+- Last updated: 2026-04-27 (status reconciled)
 
 ## Scope Covered In This Foundation Step
 - [x] Implement `Sketch` aggregate and `SketchName` value object.
@@ -55,7 +55,14 @@
 - `flutter test`: Passed
 
 ## Remaining Milestone 1 Work
-- End-to-end UX polish and acceptance checks for catalog flow.
+- None for Milestone 1 acceptance.
+- Re-run local validation after the Flutter/Android toolchain is stable in the current shell if a fresh release build is needed.
 
 ## Manual Acceptance
 - Checklist: `docs/progress/M1_ACCEPTANCE_CHECKLIST.md`
+
+## Handoff To Milestone 2
+- Implement CodeMirror 6 editor inside `InAppWebView`.
+- Add sketch language/runtime metadata for Processing Java (`Sketch.pde`) and p5.js (`sketch.js`).
+- Add `EditorBloc`, draft autosave, dirty-state tracking, and editor bridge tests.
+- Keep current catalog functionality stable while introducing editor navigation.

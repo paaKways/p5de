@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+    />
+    <style>
+      html,
+      body,
+      #editor {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        background: #ffffff;
+        overflow: hidden;
+      }
+
+      .cm-editor {
+        height: 100%;
+        font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono",
+          Menlo, monospace;
+        font-size: 18px;
+      }
+
+      .cm-scroller {
+        font-family: inherit;
+        line-height: 1.45;
+      }
+
+      .cm-gutters {
+        background: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+        color: #94a3b8;
+        padding-right: 10px;
+      }
+
+      .cm-content {
+        padding: 28px 16px 80px 20px;
+      }
+
+      .cm-lineNumbers .cm-gutterElement {
+        min-width: 48px;
+        padding: 0 14px 0 8px;
+      }
+
+      .cm-activeLine,
+      .cm-activeLineGutter {
+        background: #f8fafc;
+      }
+
+      .cm-focused {
+        outline: none;
+      }
+
+      .tok-keyword {
+        color: #9333ea;
+      }
+
+      .tok-string {
+        color: #256af4;
+      }
+
+      .tok-number {
+        color: #ea580c;
+      }
+
+      .tok-comment {
+        color: #64748b;
+        font-style: italic;
+      }
+
+      .tok-variableName,
+      .tok-function {
+        color: #2563eb;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="editor"></div>
+    <script src="editor.bundle.js"></script>
+  </body>
+</html>

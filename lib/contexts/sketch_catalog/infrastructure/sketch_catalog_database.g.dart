@@ -54,6 +54,18 @@ class $SketchEntriesTable extends SketchEntries
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _languageMeta = const VerificationMeta(
+    'language',
+  );
+  @override
+  late final GeneratedColumn<String> language = GeneratedColumn<String>(
+    'language',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('p5js'),
+  );
   static const VerificationMeta _codeMeta = const VerificationMeta('code');
   @override
   late final GeneratedColumn<String> code = GeneratedColumn<String>(
@@ -90,6 +102,7 @@ class $SketchEntriesTable extends SketchEntries
     id,
     name,
     nameNormalized,
+    language,
     code,
     createdAt,
     updatedAt,
@@ -129,6 +142,12 @@ class $SketchEntriesTable extends SketchEntries
       );
     } else if (isInserting) {
       context.missing(_nameNormalizedMeta);
+    }
+    if (data.containsKey('language')) {
+      context.handle(
+        _languageMeta,
+        language.isAcceptableOrUnknown(data['language']!, _languageMeta),
+      );
     }
     if (data.containsKey('code')) {
       context.handle(
@@ -179,6 +198,10 @@ class $SketchEntriesTable extends SketchEntries
         DriftSqlType.string,
         data['${effectivePrefix}name_normalized'],
       )!,
+      language: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}language'],
+      )!,
       code: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}code'],
@@ -204,6 +227,7 @@ class SketchEntry extends DataClass implements Insertable<SketchEntry> {
   final String id;
   final String name;
   final String nameNormalized;
+  final String language;
   final String code;
   final int createdAt;
   final int updatedAt;
@@ -211,6 +235,7 @@ class SketchEntry extends DataClass implements Insertable<SketchEntry> {
     required this.id,
     required this.name,
     required this.nameNormalized,
+    required this.language,
     required this.code,
     required this.createdAt,
     required this.updatedAt,
@@ -221,6 +246,7 @@ class SketchEntry extends DataClass implements Insertable<SketchEntry> {
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     map['name_normalized'] = Variable<String>(nameNormalized);
+    map['language'] = Variable<String>(language);
     map['code'] = Variable<String>(code);
     map['created_at'] = Variable<int>(createdAt);
     map['updated_at'] = Variable<int>(updatedAt);
@@ -232,6 +258,7 @@ class SketchEntry extends DataClass implements Insertable<SketchEntry> {
       id: Value(id),
       name: Value(name),
       nameNormalized: Value(nameNormalized),
+      language: Value(language),
       code: Value(code),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -247,6 +274,7 @@ class SketchEntry extends DataClass implements Insertable<SketchEntry> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       nameNormalized: serializer.fromJson<String>(json['nameNormalized']),
+      language: serializer.fromJson<String>(json['language']),
       code: serializer.fromJson<String>(json['code']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
@@ -259,6 +287,7 @@ class SketchEntry extends DataClass implements Insertable<SketchEntry> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'nameNormalized': serializer.toJson<String>(nameNormalized),
+      'language': serializer.toJson<String>(language),
       'code': serializer.toJson<String>(code),
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
@@ -269,6 +298,7 @@ class SketchEntry extends DataClass implements Insertable<SketchEntry> {
     String? id,
     String? name,
     String? nameNormalized,
+    String? language,
     String? code,
     int? createdAt,
     int? updatedAt,
@@ -276,6 +306,7 @@ class SketchEntry extends DataClass implements Insertable<SketchEntry> {
     id: id ?? this.id,
     name: name ?? this.name,
     nameNormalized: nameNormalized ?? this.nameNormalized,
+    language: language ?? this.language,
     code: code ?? this.code,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -287,6 +318,7 @@ class SketchEntry extends DataClass implements Insertable<SketchEntry> {
       nameNormalized: data.nameNormalized.present
           ? data.nameNormalized.value
           : this.nameNormalized,
+      language: data.language.present ? data.language.value : this.language,
       code: data.code.present ? data.code.value : this.code,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -299,6 +331,7 @@ class SketchEntry extends DataClass implements Insertable<SketchEntry> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('nameNormalized: $nameNormalized, ')
+          ..write('language: $language, ')
           ..write('code: $code, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -307,8 +340,15 @@ class SketchEntry extends DataClass implements Insertable<SketchEntry> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, nameNormalized, code, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    nameNormalized,
+    language,
+    code,
+    createdAt,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -316,6 +356,7 @@ class SketchEntry extends DataClass implements Insertable<SketchEntry> {
           other.id == this.id &&
           other.name == this.name &&
           other.nameNormalized == this.nameNormalized &&
+          other.language == this.language &&
           other.code == this.code &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -325,6 +366,7 @@ class SketchEntriesCompanion extends UpdateCompanion<SketchEntry> {
   final Value<String> id;
   final Value<String> name;
   final Value<String> nameNormalized;
+  final Value<String> language;
   final Value<String> code;
   final Value<int> createdAt;
   final Value<int> updatedAt;
@@ -333,6 +375,7 @@ class SketchEntriesCompanion extends UpdateCompanion<SketchEntry> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.nameNormalized = const Value.absent(),
+    this.language = const Value.absent(),
     this.code = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -342,6 +385,7 @@ class SketchEntriesCompanion extends UpdateCompanion<SketchEntry> {
     required String id,
     required String name,
     required String nameNormalized,
+    this.language = const Value.absent(),
     required String code,
     required int createdAt,
     required int updatedAt,
@@ -356,6 +400,7 @@ class SketchEntriesCompanion extends UpdateCompanion<SketchEntry> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? nameNormalized,
+    Expression<String>? language,
     Expression<String>? code,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
@@ -365,6 +410,7 @@ class SketchEntriesCompanion extends UpdateCompanion<SketchEntry> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (nameNormalized != null) 'name_normalized': nameNormalized,
+      if (language != null) 'language': language,
       if (code != null) 'code': code,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -376,6 +422,7 @@ class SketchEntriesCompanion extends UpdateCompanion<SketchEntry> {
     Value<String>? id,
     Value<String>? name,
     Value<String>? nameNormalized,
+    Value<String>? language,
     Value<String>? code,
     Value<int>? createdAt,
     Value<int>? updatedAt,
@@ -385,6 +432,7 @@ class SketchEntriesCompanion extends UpdateCompanion<SketchEntry> {
       id: id ?? this.id,
       name: name ?? this.name,
       nameNormalized: nameNormalized ?? this.nameNormalized,
+      language: language ?? this.language,
       code: code ?? this.code,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -403,6 +451,9 @@ class SketchEntriesCompanion extends UpdateCompanion<SketchEntry> {
     }
     if (nameNormalized.present) {
       map['name_normalized'] = Variable<String>(nameNormalized.value);
+    }
+    if (language.present) {
+      map['language'] = Variable<String>(language.value);
     }
     if (code.present) {
       map['code'] = Variable<String>(code.value);
@@ -425,6 +476,7 @@ class SketchEntriesCompanion extends UpdateCompanion<SketchEntry> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('nameNormalized: $nameNormalized, ')
+          ..write('language: $language, ')
           ..write('code: $code, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -452,6 +504,7 @@ typedef $$SketchEntriesTableCreateCompanionBuilder =
       required String id,
       required String name,
       required String nameNormalized,
+      Value<String> language,
       required String code,
       required int createdAt,
       required int updatedAt,
@@ -462,6 +515,7 @@ typedef $$SketchEntriesTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String> nameNormalized,
+      Value<String> language,
       Value<String> code,
       Value<int> createdAt,
       Value<int> updatedAt,
@@ -489,6 +543,11 @@ class $$SketchEntriesTableFilterComposer
 
   ColumnFilters<String> get nameNormalized => $composableBuilder(
     column: $table.nameNormalized,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get language => $composableBuilder(
+    column: $table.language,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -532,6 +591,11 @@ class $$SketchEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get language => $composableBuilder(
+    column: $table.language,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get code => $composableBuilder(
     column: $table.code,
     builder: (column) => ColumnOrderings(column),
@@ -567,6 +631,9 @@ class $$SketchEntriesTableAnnotationComposer
     column: $table.nameNormalized,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get language =>
+      $composableBuilder(column: $table.language, builder: (column) => column);
 
   GeneratedColumn<String> get code =>
       $composableBuilder(column: $table.code, builder: (column) => column);
@@ -618,6 +685,7 @@ class $$SketchEntriesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> nameNormalized = const Value.absent(),
+                Value<String> language = const Value.absent(),
                 Value<String> code = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
@@ -626,6 +694,7 @@ class $$SketchEntriesTableTableManager
                 id: id,
                 name: name,
                 nameNormalized: nameNormalized,
+                language: language,
                 code: code,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -636,6 +705,7 @@ class $$SketchEntriesTableTableManager
                 required String id,
                 required String name,
                 required String nameNormalized,
+                Value<String> language = const Value.absent(),
                 required String code,
                 required int createdAt,
                 required int updatedAt,
@@ -644,6 +714,7 @@ class $$SketchEntriesTableTableManager
                 id: id,
                 name: name,
                 nameNormalized: nameNormalized,
+                language: language,
                 code: code,
                 createdAt: createdAt,
                 updatedAt: updatedAt,

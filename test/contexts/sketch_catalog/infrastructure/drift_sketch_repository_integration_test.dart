@@ -7,6 +7,7 @@ import 'package:p5de/contexts/sketch_catalog/application/delete_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/list_sketches.dart';
 import 'package:p5de/contexts/sketch_catalog/application/rename_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/search_sketches.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/drift_sketch_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/sketch_catalog_database.dart';
 import 'package:p5de/shared/clock.dart';
@@ -32,7 +33,10 @@ void main() {
         clock: _FixedClock(1700000005000),
       );
 
-      final created = await createSketch(name: 'Persistent Sketch');
+      final created = await createSketch(
+        name: 'Persistent Sketch',
+        language: SketchLanguage.processingJava,
+      );
       await renameSketch(sketchId: created.id, newName: 'Renamed Sketch');
 
       final listSketchesSession1 = ListSketches(firstSessionRepository);
@@ -56,6 +60,7 @@ void main() {
       expect(reopenedItems, hasLength(1));
       expect(reopenedItems.first.id, created.id);
       expect(reopenedItems.first.name.value, 'Renamed Sketch');
+      expect(reopenedItems.first.language, SketchLanguage.processingJava);
 
       final searchResults = await searchSketchesSession2('renamed');
       expect(searchResults, hasLength(1));
