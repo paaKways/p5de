@@ -3,7 +3,7 @@
 ## Milestone
 - Name: Milestone 1 - Sketch Catalog Foundation
 - Source: `docs/IMPLEMENTATION_PLAN.md`
-- Last updated: 2026-03-13
+- Last updated: 2026-03-14
 
 ## Scope Covered In This Foundation Step
 - [x] Implement `Sketch` aggregate and `SketchName` value object.
@@ -54,8 +54,7 @@
 - `flutter analyze`: Passed
 - `flutter test`: Passed
 
-## Remaining Milestone 1 Work
-- End-to-end UX polish and acceptance checks for catalog flow.
-
 ## Manual Acceptance
 - Checklist: `docs/progress/M1_ACCEPTANCE_CHECKLIST.md`
+- Result: Pass on web execution path.
+- Caveat: Mobile-only lifecycle checks (rotation and background/foreground) are still pending on Android emulator/device.

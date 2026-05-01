@@ -84,6 +84,7 @@ Architecture style:
 - Domain-Driven Design (DDD) with explicit bounded contexts.
 - Layers per bounded context: `presentation -> application -> domain -> infrastructure`.
 - State management: BLoC/Cubit in the presentation layer only.
+- UI/page boundaries: Presentation widgets should depend on narrow callbacks/ports instead of full app DI containers (see ADR-006).
 
 Bounded contexts and module boundaries:
 - `lib/app`: app bootstrap, dependency injection wiring, navigation composition
@@ -230,8 +231,10 @@ Track major technical decisions as ADRs.
 | ADR-003 | Select storage layer (Drift/SQLite) | Accepted | 2026-03-12 | docs/adr/ADR-003-storage.md |
 | ADR-004 | Select architecture style (DDD) | Accepted | 2026-03-12 | docs/adr/ADR-004-architecture.md |
 | ADR-005 | Select state management (BLoC) | Accepted | 2026-03-12 | docs/adr/ADR-005-state-management.md |
+| ADR-006 | Keep UI pages decoupled from AppDependencies | Accepted | 2026-03-14 | docs/adr/ADR-006-ui-navigation-and-di-boundaries.md |
 
 ## 16. Open Technical Questions
 - Should MVP keep runtime networking fully blocked, or allow opt-in external asset loading per sketch?
 - Do we need a low-memory editor mode for devices below 4GB RAM?
 - Should tablet layout (split editor/preview) be enabled in MVP or first post-MVP release?
+

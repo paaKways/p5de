@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:p5de/app/di/app_dependencies.dart';
+import 'package:p5de/contexts/editor/presentation/editor_page.dart';
 import 'package:p5de/contexts/sketch_catalog/application/create_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/delete_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/list_sketches.dart';
 import 'package:p5de/contexts/sketch_catalog/application/rename_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/search_sketches.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/sketch_name.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/presentation/sketch_catalog_bloc.dart';
 import 'package:p5de/contexts/sketch_catalog/presentation/sketch_catalog_page.dart';
@@ -40,10 +43,108 @@ void main() {
     expect(find.byKey(const Key('catalog_add_fab')), findsOneWidget);
     expect(find.byKey(const Key('catalog_search_field')), findsOneWidget);
   });
+
+  testWidgets('navigates from catalog tile to editor page', (tester) async {
+    final repository = _InMemorySketchRepository(
+      items: [
+        Sketch(
+          id: 'sk-1',
+          name: SketchName('Navigation Test'),
+          code: 'function setup() {}',
+          createdAt: 100,
+          updatedAt: 100,
+        ),
+      ],
+    );
+
+    final dependencies = AppDependencies.forTesting(
+      clock: _FixedClock(),
+      idGenerator: _FakeIdGenerator(),
+      sketchRepository: repository,
+    );
+
+    final bloc = SketchCatalogBloc(
+      createSketch: dependencies.createSketch,
+      renameSketch: dependencies.renameSketch,
+      deleteSketch: dependencies.deleteSketch,
+      listSketches: dependencies.listSketches,
+      searchSketches: dependencies.searchSketches,
+    )..add(const SketchCatalogLoaded());
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider.value(
+          value: bloc,
+          child: SketchCatalogPage(
+            onOpenSketch: (context, sketchId) {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => EditorPage(
+                    dependencies: dependencies,
+                    sketchId: sketchId,
+                    forcePlainTextEditor: true,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sketch_tile_sk-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('editor_code_field')), findsOneWidget);
+    expect(find.text('Navigation Test'), findsOneWidget);
+  });
+
+  testWidgets('editor page loads sketch and shows save indicator', (
+    tester,
+  ) async {
+    final repository = _InMemorySketchRepository(
+      items: [
+        Sketch(
+          id: 'ed-1',
+          name: SketchName('Editor Load Test'),
+          code: 'line1\nline2',
+          createdAt: 100,
+          updatedAt: 100,
+        ),
+      ],
+    );
+
+    final dependencies = AppDependencies.forTesting(
+      clock: _FixedClock(),
+      idGenerator: _FakeIdGenerator(),
+      sketchRepository: repository,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EditorPage(
+          dependencies: dependencies,
+          sketchId: 'ed-1',
+          forcePlainTextEditor: true,
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Editor Load Test'), findsOneWidget);
+    expect(find.byKey(const Key('editor_code_field')), findsOneWidget);
+    expect(find.byKey(const Key('editor_save_indicator')), findsOneWidget);
+    expect(find.byKey(const Key('editor_save_button')), findsOneWidget);
+  });
 }
 
 class _InMemorySketchRepository implements SketchRepository {
-  final List<Sketch> _items = [];
+  _InMemorySketchRepository({List<Sketch>? items})
+    : _items = List<Sketch>.from(items ?? <Sketch>[]);
+
+  final List<Sketch> _items;
 
   @override
   Future<void> create(Sketch sketch) async => _items.add(sketch);
@@ -57,17 +158,44 @@ class _InMemorySketchRepository implements SketchRepository {
     String normalizedName, {
     String? excludingSketchId,
   }) async {
-    return _items.any((item) => item.name.normalized == normalizedName);
+    return _items.any((item) {
+      if (excludingSketchId != null && item.id == excludingSketchId) {
+        return false;
+      }
+      return item.name.normalized == normalizedName;
+    });
   }
 
   @override
-  Future<Sketch?> findById(String sketchId) async => null;
+  Future<Sketch?> findById(String sketchId) async {
+    for (final item in _items) {
+      if (item.id == sketchId) {
+        return item;
+      }
+    }
+    return null;
+  }
 
   @override
-  Future<List<Sketch>> list({String? query}) async => _items;
+  Future<List<Sketch>> list({String? query}) async {
+    if (query == null || query.trim().isEmpty) {
+      return List<Sketch>.from(_items);
+    }
+
+    final normalized = query.trim().toLowerCase();
+    return _items
+        .where((item) => item.name.normalized.contains(normalized))
+        .toList(growable: false);
+  }
 
   @override
-  Future<void> update(Sketch sketch) async {}
+  Future<void> update(Sketch sketch) async {
+    final index = _items.indexWhere((item) => item.id == sketch.id);
+    if (index < 0) {
+      return;
+    }
+    _items[index] = sketch;
+  }
 }
 
 class _FakeIdGenerator implements IdGenerator {

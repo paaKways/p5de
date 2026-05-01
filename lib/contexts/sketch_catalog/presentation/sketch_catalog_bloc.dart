@@ -59,7 +59,10 @@ class SketchCatalogBloc extends Bloc<SketchCatalogEvent, SketchCatalogState> {
     Emitter<SketchCatalogState> emit,
   ) async {
     try {
-      await _createSketch(name: event.name, code: event.code ?? kDefaultSketchTemplate);
+      await _createSketch(
+        name: event.name,
+        code: event.code ?? kDefaultSketchTemplate,
+      );
       await _refresh(emit, query: state.query);
     } catch (error) {
       emit(state.copyWith(errorMessage: _mapError(error)));
@@ -133,4 +136,3 @@ class SketchCatalogBloc extends Bloc<SketchCatalogEvent, SketchCatalogState> {
     return 'Unexpected error. Please try again.';
   }
 }
-

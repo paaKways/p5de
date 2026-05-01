@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-03-14
+### Milestone 2 - Editor Slice Progress Update
+- Upgraded ssets/editor/codemirror_host.html to initialize a CodeMirror 6 editor in the native webview host.
+- Preserved stable window.editorBridge API (setCode, getCode, ocus) for Flutter integration.
+- Added resilient fallback to textarea editor if CodeMirror modules fail to load.
+- Added milestone acceptance checklist at docs/progress/M2_ACCEPTANCE_CHECKLIST.md.
+### Architecture Docs Update
+- Added ADR-006 to capture UI/page boundary decision:
+  - keep page widgets decoupled from full `AppDependencies`
+  - use narrow callbacks/ports for navigation/composition boundaries
+- Added engineering learnings log at `docs/engineering/LEARNINGS.md`.
 ## 2026-03-13
 ### Milestone 1 - Persistence Integration (Validated)
 - Made `SketchCatalogDatabase` testable by allowing optional `QueryExecutor` injection.
@@ -68,3 +79,5 @@
   - `dart run build_runner build --delete-conflicting-outputs`
   - `flutter analyze`
   - `flutter test`
+
+

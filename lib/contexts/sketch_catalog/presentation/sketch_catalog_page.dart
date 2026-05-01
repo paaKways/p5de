@@ -6,7 +6,9 @@ import 'package:p5de/contexts/sketch_catalog/infrastructure/web_local_storage_sk
 import 'package:p5de/contexts/sketch_catalog/presentation/sketch_catalog_bloc.dart';
 
 class SketchCatalogPage extends StatelessWidget {
-  const SketchCatalogPage({super.key});
+  const SketchCatalogPage({this.onOpenSketch, super.key});
+
+  final void Function(BuildContext context, String sketchId)? onOpenSketch;
 
   @override
   Widget build(BuildContext context) {
@@ -131,6 +133,7 @@ class SketchCatalogPage extends StatelessWidget {
                         ),
                         elevation: 0,
                         child: ListTile(
+                          onTap: () => onOpenSketch?.call(context, sketch.id),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 8,

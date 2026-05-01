@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>p5de Editor Host</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #0f172a;
+      color: #ffffff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    #root {
+      height: 100%;
+    }
+    .loading {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+      color: #cbd5e1;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .spinner {
+      width: 22px;
+      height: 22px;
+      border: 3px solid #334155;
+      border-top-color: #93c5fd;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .cm-editor {
+      height: 100%;
+      font-size: 14px;
+    }
+    .cm-scroller {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      line-height: 1.45;
+    }
+    textarea {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      background: #0f172a;
+      color: #f8fafc;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 14px;
+      line-height: 1.45;
+      padding: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    (function () {
+      const root = document.getElementById('root');
+      let editorApi = null;
+      let activeMode = 'loading';
+      let pendingCode = '';
+      let shouldFocusWhenReady = false;
+
+      function postParentMessage(payload) {
+        if (!window.parent || window.parent === window) {
+          return;
+        }
+        window.parent.postMessage(JSON.stringify(payload), '*');
+      }
+
+      function notifyCodeChanged(value) {
+        if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+          window.flutter_inappwebview.callHandler('onEditorCodeChanged', value);
+        }
+        postParentMessage({ kind: 'editor.codeChanged', code: value });
+      }
+
+      function notifyReady() {
+        postParentMessage({ kind: 'editor.ready', mode: activeMode });
+      }
+
+      function notifyError(message) {
+        postParentMessage({ kind: 'editor.error', message: String(message || 'unknown') });
+      }
+
+      function notifyDebug(message) {
+        postParentMessage({ kind: 'editor.debug', message: String(message || '') });
+      }
+
+      function renderLoading() {
+        root.innerHTML = '';
+        const container = document.createElement('div');
+        container.className = 'loading';
+
+        const spinner = document.createElement('div');
+        spinner.className = 'spinner';
+
+        const text = document.createElement('div');
+        text.textContent = 'Loading editor...';
+
+        container.appendChild(spinner);
+        container.appendChild(text);
+        root.appendChild(container);
+      }
+
+      function createTextareaEditor(initialCode) {
+        const textarea = document.createElement('textarea');
+        textarea.spellcheck = false;
+        textarea.value = initialCode || '';
+        textarea.addEventListener('input', function () {
+          notifyCodeChanged(textarea.value);
+        });
+
+        root.innerHTML = '';
+        root.appendChild(textarea);
+
+        return {
+          mode: 'textarea',
+          setCode: function (value) {
+            textarea.value = value || '';
+          },
+          getCode: function () {
+            return textarea.value;
+          },
+          focus: function () {
+            textarea.focus();
+          }
+        };
+      }
+
+      function handleExternalCommand(payload) {
+        if (!payload || typeof payload.kind !== 'string') {
+          return;
+        }
+
+        if (payload.kind === 'editor.setCode') {
+          const next = payload.code || '';
+          pendingCode = next;
+          if (editorApi) {
+            editorApi.setCode(next);
+          }
+          notifyDebug('setCode command len=' + next.length + ' mode=' + activeMode);
+          return;
+        }
+
+        if (payload.kind === 'editor.focus') {
+          if (editorApi) {
+            editorApi.focus();
+          } else {
+            shouldFocusWhenReady = true;
+          }
+          return;
+        }
+
+        if (payload.kind === 'editor.getMode') {
+          postParentMessage({ kind: 'editor.mode', mode: activeMode });
+        }
+      }
+
+      window.addEventListener('message', function (event) {
+        const data = event.data;
+        if (typeof data !== 'string') {
+          return;
+        }
+
+        try {
+          const payload = JSON.parse(data);
+          handleExternalCommand(payload);
+        } catch (_) {
+          // Ignore non-JSON messages from unrelated browser events.
+        }
+      });
+
+      window.editorBridge = {
+        setCode: function (value) {
+          pendingCode = value || '';
+          if (editorApi) {
+            editorApi.setCode(pendingCode);
+          }
+          notifyDebug('bridge.setCode len=' + pendingCode.length + ' mode=' + activeMode);
+        },
+        getCode: function () {
+          return editorApi ? editorApi.getCode() : pendingCode;
+        },
+        focus: function () {
+          if (editorApi) {
+            editorApi.focus();
+          } else {
+            shouldFocusWhenReady = true;
+          }
+        },
+        getMode: function () {
+          return activeMode;
+        }
+      };
+
+      renderLoading();
+      notifyDebug('renderLoading');
+      notifyReady();
+
+      async function importLocalModule(path) {
+        const url = new URL(path, import.meta.url);
+        const response = await fetch(url.href);
+        if (!response.ok) {
+          throw new Error('HTTP ' + response.status + ' for ' + url.href);
+        }
+
+        const source = await response.text();
+        const blobUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+
+        try {
+          return await import(blobUrl);
+        } finally {
+          URL.revokeObjectURL(blobUrl);
+        }
+      }
+
+      async function loadCodeMirrorPackage() {
+        return await importLocalModule('./codemirror/codemirror.js');
+      }
+
+      function applyFocusIfNeeded() {
+        if (shouldFocusWhenReady && editorApi) {
+          editorApi.focus();
+          shouldFocusWhenReady = false;
+        }
+      }
+
+      async function tryUpgradeToCodeMirror() {
+        const cm = await loadCodeMirrorPackage();
+        notifyDebug('codemirror package loaded');
+
+        const codeSnapshot = pendingCode;
+        notifyDebug('codemirror init snapshot len=' + codeSnapshot.length);
+
+        const EditorState = cm.EditorState;
+        const EditorView = cm.EditorView;
+        const keymap = cm.keymap;
+        const lineNumbers = cm.lineNumbers;
+        const highlightActiveLine = cm.highlightActiveLine;
+        const drawSelection = cm.drawSelection;
+        const dropCursor = cm.dropCursor;
+        const rectangularSelection = cm.rectangularSelection;
+        const crosshairCursor = cm.crosshairCursor;
+        const highlightActiveLineGutter = cm.highlightActiveLineGutter;
+        const defaultKeymap = cm.defaultKeymap;
+        const history = cm.history;
+        const historyKeymap = cm.historyKeymap;
+        const indentWithTab = cm.indentWithTab;
+        const bracketMatching = cm.bracketMatching;
+        const indentOnInput = cm.indentOnInput;
+        const syntaxHighlighting = cm.syntaxHighlighting;
+        const defaultHighlightStyle = cm.defaultHighlightStyle;
+        const javascript = cm.javascript;
+        const oneDark = cm.oneDark;
+
+        let isApplyingExternalCode = false;
+
+        const state = EditorState.create({
+          doc: codeSnapshot,
+          extensions: [
+            lineNumbers(),
+            highlightActiveLineGutter(),
+            history(),
+            drawSelection(),
+            dropCursor(),
+            EditorState.allowMultipleSelections.of(true),
+            indentOnInput(),
+            bracketMatching(),
+            rectangularSelection(),
+            crosshairCursor(),
+            highlightActiveLine(),
+            keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+            syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+            javascript(),
+            oneDark,
+            EditorView.lineWrapping,
+            EditorView.updateListener.of(function (update) {
+              if (!update.docChanged || isApplyingExternalCode) {
+                return;
+              }
+              const next = update.state.doc.toString();
+              pendingCode = next;
+              notifyDebug('cm docChanged len=' + next.length);
+              notifyCodeChanged(next);
+            }),
+          ],
+        });
+
+        root.innerHTML = '';
+        const view = new EditorView({ state, parent: root });
+
+        editorApi = {
+          mode: 'codemirror',
+          setCode: function (value) {
+            const next = value || '';
+            pendingCode = next;
+            const current = view.state.doc.toString();
+            if (current === next) {
+              return;
+            }
+            isApplyingExternalCode = true;
+            view.dispatch({
+              changes: {
+                from: 0,
+                to: view.state.doc.length,
+                insert: next,
+              },
+            });
+            isApplyingExternalCode = false;
+          },
+          getCode: function () {
+            return view.state.doc.toString();
+          },
+          focus: function () {
+            view.focus();
+          }
+        };
+
+        activeMode = editorApi.mode;
+        notifyDebug('codemirror ready');
+        applyFocusIfNeeded();
+        notifyReady();
+      }
+
+      tryUpgradeToCodeMirror().catch(function (error) {
+        notifyError('CodeMirror init failed: ' + error);
+
+        editorApi = createTextareaEditor(pendingCode);
+        activeMode = editorApi.mode;
+        notifyDebug('fallback textarea len=' + pendingCode.length);
+        applyFocusIfNeeded();
+        notifyReady();
+      });
+    })();
+  </script>
+</body>
+</html>
