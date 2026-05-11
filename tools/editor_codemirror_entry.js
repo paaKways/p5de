@@ -67,44 +67,49 @@ function createEditor(options) {
   const code = options.code || "";
   const language = options.language || "p5js";
 
-  if (view) {
-    view.destroy();
-    view = undefined;
+  try {
+    if (view) {
+      view.destroy();
+      view = undefined;
+    }
+    mount.textContent = "";
+
+    view = new EditorView({
+      parent: mount,
+      state: EditorState.create({
+        doc: code,
+        extensions: [
+          lineNumbers(),
+          highlightSpecialChars(),
+          history(),
+          drawSelection(),
+          indentOnInput(),
+          bracketMatching(),
+          highlightActiveLine(),
+          syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+          languageExtension(language),
+          search({ top: true }),
+          keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
+          EditorView.lineWrapping,
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) {
+              window.clearTimeout(changeTimer);
+              changeTimer = window.setTimeout(notifyCodeChanged, 120);
+            }
+            if (update.selectionSet) {
+              notifyCursor();
+            }
+          }),
+        ],
+      }),
+    });
+
+    notifyCursor();
+    postMessage("editorReady", { ready: true });
+  } catch (error) {
+    console.error(error);
+    mount.textContent = `Editor failed to load: ${error?.message || error}`;
   }
-  mount.textContent = "";
-
-  view = new EditorView({
-    parent: mount,
-    state: EditorState.create({
-      doc: code,
-      extensions: [
-        lineNumbers(),
-        highlightSpecialChars(),
-        history(),
-        drawSelection(),
-        indentOnInput(),
-        bracketMatching(),
-        highlightActiveLine(),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-        languageExtension(language),
-        search({ top: true }),
-        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
-        EditorView.lineWrapping,
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            window.clearTimeout(changeTimer);
-            changeTimer = window.setTimeout(notifyCodeChanged, 120);
-          }
-          if (update.selectionSet) {
-            notifyCursor();
-          }
-        }),
-      ],
-    }),
-  });
-
-  notifyCursor();
-  postMessage("editorReady", { ready: true });
 }
 
 function setCode(code) {

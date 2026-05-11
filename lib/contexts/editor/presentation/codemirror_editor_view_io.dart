@@ -24,8 +24,16 @@ class CodeMirrorEditorView extends StatefulWidget {
 }
 
 class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
+  static const String _editorAssetUrlText =
+      'https://appassets.androidplatform.net/assets/flutter_assets/assets/editor/codemirror/editor.html';
+  static const String _editorBundleAssetUrlText =
+      'https://appassets.androidplatform.net/assets/flutter_assets/assets/editor/codemirror/editor.bundle.js';
+  static final WebUri _editorAssetUrl = WebUri(_editorAssetUrlText);
+
   InAppWebViewController? _controller;
   bool _ready = false;
+  bool _initializing = false;
+  int _loadGeneration = 0;
 
   Future<void> setCode(String code) async {
     if (!_ready) {
@@ -112,12 +120,86 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
   }
 
   Future<void> _initializeCodeMirror() async {
+    if (_ready || _initializing) {
+      return;
+    }
+    _initializing = true;
+    final generation = ++_loadGeneration;
     final options = jsonEncode({
       'code': widget.code,
       'language': widget.language,
     });
+    final bundleUrl = jsonEncode(_editorBundleAssetUrlText);
+    try {
+      for (var attempt = 0; attempt < 150; attempt += 1) {
+        if (!mounted || generation != _loadGeneration) {
+          return;
+        }
+        await _loadBundledCodeMirror(options, bundleUrl);
+        if (await _isCodeMirrorMounted()) {
+          return;
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+    } finally {
+      _initializing = false;
+    }
+  }
+
+  Future<bool> _isCodeMirrorMounted() async {
+    final isMounted = await _controller?.evaluateJavascript(
+      source: 'Boolean(document.querySelector(".cm-editor"))',
+    );
+    return isMounted == true || isMounted == 'true';
+  }
+
+  Future<void> _loadBundledCodeMirror(String options, String bundleUrl) async {
     await _controller?.evaluateJavascript(
-      source: 'window.P5deEditor.createEditor($options);',
+      source:
+          '''
+window.__p5dePendingEditorOptions = $options;
+async function loadP5deEditorBundle() {
+  function mountEditor() {
+    if (!window.P5deEditor?.createEditor) {
+      return false;
+    }
+    window.__p5deEditorBundleLoaded = true;
+    window.__p5deEditorBundleLoading = false;
+    window.__p5deEditorBundleError = null;
+    if (!document.querySelector('.cm-editor')) {
+      window.P5deEditor.createEditor(window.__p5dePendingEditorOptions);
+    }
+    return true;
+  }
+
+  function fail(error) {
+    window.__p5deEditorBundleLoading = false;
+    window.__p5deEditorBundleError = error.message;
+    console.error(error);
+    var editor = document.getElementById('editor');
+    if (editor) {
+      editor.textContent = 'Editor failed to load: ' + error.message;
+    }
+  }
+
+  if (mountEditor() || window.__p5deEditorBundleLoading) {
+    return;
+  }
+
+  window.__p5deEditorBundleLoading = true;
+  window.__p5deEditorBundleError = null;
+
+  try {
+    await import($bundleUrl);
+    if (!mountEditor()) {
+      fail(new Error('Editor bundle loaded without API'));
+    }
+  } catch (error) {
+    fail(error);
+  }
+}
+loadP5deEditorBundle();
+''',
     );
   }
 
@@ -125,16 +207,36 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
   Widget build(BuildContext context) {
     return InAppWebView(
       key: const Key('editor_codemirror_webview'),
-      initialFile: 'assets/editor/codemirror/editor.html',
+      initialUrlRequest: URLRequest(url: _editorAssetUrl),
       initialSettings: InAppWebViewSettings(
         javaScriptEnabled: true,
         transparentBackground: true,
         supportZoom: false,
         disableContextMenu: true,
+        allowFileAccess: false,
+        allowContentAccess: false,
+        allowFileAccessFromFileURLs: false,
+        allowUniversalAccessFromFileURLs: false,
+        webViewAssetLoader: WebViewAssetLoader(
+          pathHandlers: [AssetsPathHandler(path: '/assets/')],
+        ),
       ),
       onWebViewCreated: (controller) {
         _controller = controller;
         _registerBridgeHandlers(controller);
+        Future<void>.delayed(
+          const Duration(milliseconds: 600),
+          _initializeCodeMirror,
+        );
+      },
+      onLoadStart: (controller, url) {
+        _ready = false;
+        _loadGeneration += 1;
+      },
+      onProgressChanged: (controller, progress) {
+        if (progress == 100) {
+          _initializeCodeMirror();
+        }
       },
       onLoadStop: (controller, url) => _initializeCodeMirror(),
     );

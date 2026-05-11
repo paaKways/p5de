@@ -1,5 +1,6 @@
 import 'package:p5de/app/di/sketch_repository_factory_native.dart'
     if (dart.library.html) 'package:p5de/app/di/sketch_repository_factory_web.dart'
+    if (dart.library.js_interop) 'package:p5de/app/di/sketch_repository_factory_web.dart'
     as sketch_repository_factory;
 import 'package:p5de/contexts/sketch_catalog/application/create_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/delete_sketch.dart';
