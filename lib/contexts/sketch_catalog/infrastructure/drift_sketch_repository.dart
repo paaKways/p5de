@@ -3,29 +3,44 @@ import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_name.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
+import 'package:p5de/contexts/sketch_catalog/infrastructure/native_sketch_file_store.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/sketch_catalog_database.dart';
 
 // Repository adapter between domain contracts and Drift persistence.
 class DriftSketchRepository implements SketchRepository {
-  DriftSketchRepository(this._database);
+  DriftSketchRepository(this._database, {NativeSketchFileStore? fileStore})
+    : _fileStore = fileStore;
 
   final SketchCatalogDatabase _database;
+  final NativeSketchFileStore? _fileStore;
 
   SketchDao get _dao => _database.sketchDao;
 
   @override
   Future<void> create(Sketch sketch) async {
     await _dao.insertSketch(_toCompanion(sketch));
+    await _fileStore?.write(sketch);
   }
 
   @override
   Future<void> update(Sketch sketch) async {
+    final previous = await findById(sketch.id);
     await _dao.updateSketch(_toCompanion(sketch));
+    if (previous != null &&
+        (previous.name.value != sketch.name.value ||
+            previous.language != sketch.language)) {
+      await _fileStore?.delete(previous);
+    }
+    await _fileStore?.write(sketch);
   }
 
   @override
   Future<void> deleteById(String sketchId) async {
+    final previous = await findById(sketchId);
     await _dao.deleteSketchById(sketchId);
+    if (previous != null) {
+      await _fileStore?.delete(previous);
+    }
   }
 
   @override
@@ -41,7 +56,11 @@ class DriftSketchRepository implements SketchRepository {
   Future<List<Sketch>> list({String? query}) async {
     final rows = await _dao.list(query: query);
     // Keep domain layer independent from generated Drift row types.
-    return rows.map(_toDomain).toList(growable: false);
+    final sketches = rows.map(_toDomain).toList(growable: false);
+    if (query == null || query.trim().isEmpty) {
+      await _fileStore?.sync(sketches);
+    }
+    return sketches;
   }
 
   @override

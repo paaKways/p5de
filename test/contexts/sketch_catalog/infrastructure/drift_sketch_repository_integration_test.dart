@@ -9,6 +9,7 @@ import 'package:p5de/contexts/sketch_catalog/application/rename_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/search_sketches.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/drift_sketch_repository.dart';
+import 'package:p5de/contexts/sketch_catalog/infrastructure/native_sketch_file_store.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/sketch_catalog_database.dart';
 import 'package:p5de/shared/clock.dart';
 import 'package:p5de/shared/id_generator.dart';
@@ -71,6 +72,66 @@ void main() {
       expect(emptyAfterDelete, isEmpty);
 
       await secondSessionDb.close();
+    } finally {
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
+    }
+  });
+
+  test('mirrors native sketches to disk files', () async {
+    final tempDir = await Directory.systemTemp.createTemp(
+      'p5de_file_store_test_',
+    );
+    final dbFile = File('${tempDir.path}/catalog.sqlite');
+    final sketchesDir = Directory('${tempDir.path}/sketches');
+
+    try {
+      final database = SketchCatalogDatabase(
+        executor: NativeDatabase.createInBackground(dbFile),
+      );
+      final repository = DriftSketchRepository(
+        database,
+        fileStore: NativeSketchFileStore(rootDirectory: sketchesDir),
+      );
+      final createSketch = CreateSketch(
+        repository: repository,
+        idGenerator: _FixedIdGenerator('file-id-1'),
+        clock: _FixedClock(1700000000000),
+      );
+      final renameSketch = RenameSketch(
+        repository: repository,
+        clock: _FixedClock(1700000005000),
+      );
+      final deleteSketch = DeleteSketch(repository);
+
+      final created = await createSketch(
+        name: 'Disk Sketch',
+        language: SketchLanguage.processingJava,
+        code: 'void setup() {}',
+      );
+
+      final createdFile = File('${sketchesDir.path}/Disk Sketch/Sketch.pde');
+      expect(await createdFile.exists(), isTrue);
+      expect(await createdFile.readAsString(), 'void setup() {}');
+
+      await renameSketch(sketchId: created.id, newName: 'Renamed Disk Sketch');
+
+      final oldDirectory = Directory('${sketchesDir.path}/Disk Sketch');
+      final renamedFile = File(
+        '${sketchesDir.path}/Renamed Disk Sketch/Sketch.pde',
+      );
+      expect(await oldDirectory.exists(), isFalse);
+      expect(await renamedFile.exists(), isTrue);
+      expect(await renamedFile.readAsString(), 'void setup() {}');
+
+      await deleteSketch(created.id);
+      expect(
+        await Directory('${sketchesDir.path}/Renamed Disk Sketch').exists(),
+        isFalse,
+      );
+
+      await database.close();
     } finally {
       if (await tempDir.exists()) {
         await tempDir.delete(recursive: true);
