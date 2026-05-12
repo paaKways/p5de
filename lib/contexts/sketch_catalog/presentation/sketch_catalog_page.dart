@@ -320,139 +320,185 @@ class SketchCatalogPage extends StatelessWidget {
   Future<void> _showCreateDialog(BuildContext context) async {
     final nameController = TextEditingController();
     var language = SketchLanguage.processingJava;
-    var templateChoice = _SketchTemplateChoice.defaultStarter;
 
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            return AlertDialog(
-              titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-              contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 4),
-              actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'New Sketch',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    'Create a new workspace to start your design journey.',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-                  ),
-                ],
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Sketch name',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: nameController,
-                      autofocus: true,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter sketch name...',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Runtime',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    _LanguageTile(
-                      title: SketchLanguage.processingJava.displayName,
-                      subtitle: 'Bundled WASM Processing runtime',
-                      icon: Icons.memory_outlined,
-                      selected: language == SketchLanguage.processingJava,
-                      onTap: () => setDialogState(
-                        () => language = SketchLanguage.processingJava,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _LanguageTile(
-                      title: SketchLanguage.p5js.displayName,
-                      subtitle: 'Bundled p5.js web runtime',
-                      icon: Icons.javascript_outlined,
-                      selected: language == SketchLanguage.p5js,
-                      onTap: () =>
-                          setDialogState(() => language = SketchLanguage.p5js),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Select a template',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    _TemplateTile(
-                      title: 'Blank',
-                      subtitle: 'Start with a clean canvas',
-                      icon: Icons.crop_square_outlined,
-                      selected: templateChoice == _SketchTemplateChoice.blank,
-                      onTap: () => setDialogState(
-                        () => templateChoice = _SketchTemplateChoice.blank,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _TemplateTile(
-                      title: 'Default Starter',
-                      subtitle: 'Pre-configured p5 setup and draw functions',
-                      icon: Icons.dashboard_customize_outlined,
-                      selected:
-                          templateChoice ==
-                          _SketchTemplateChoice.defaultStarter,
-                      onTap: () => setDialogState(
-                        () => templateChoice =
-                            _SketchTemplateChoice.defaultStarter,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF256AF4),
-                  ),
-                  onPressed: () {
-                    final code = templateChoice == _SketchTemplateChoice.blank
-                        ? ''
-                        : defaultSketchTemplateFor(language);
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (dialogContext, setDialogState) {
+              final media = MediaQuery.of(dialogContext);
+              final availableHeight =
+                  media.size.height - media.viewInsets.bottom - 32;
+              final dialogMaxHeight = availableHeight > 680
+                  ? 680.0
+                  : availableHeight;
 
-                    context.read<SketchCatalogBloc>().add(
-                      SketchCatalogCreateRequested(
-                        nameController.text,
-                        language: language,
-                        code: code,
-                      ),
-                    );
-                    Navigator.of(dialogContext).pop();
-                  },
-                  icon: const Icon(Icons.arrow_forward, size: 18),
-                  label: const Text('Create Sketch'),
+              return Dialog(
+                key: const Key('create_sketch_dialog'),
+                alignment: media.viewInsets.bottom > 0
+                    ? Alignment.topCenter
+                    : Alignment.center,
+                backgroundColor: Colors.white,
+                insetPadding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 16,
                 ),
-              ],
-            );
-          },
-        );
-      },
-    );
+                clipBehavior: Clip.antiAlias,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 560,
+                    maxHeight: dialogMaxHeight < 280 ? 280 : dialogMaxHeight,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(24, 22, 24, 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'New Sketch',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              'Create a new workspace to start your design journey.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Flexible(
+                        child: SingleChildScrollView(
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: const EdgeInsets.fromLTRB(24, 4, 24, 18),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Sketch name',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                key: const Key('create_sketch_name_field'),
+                                controller: nameController,
+                                autofocus: true,
+                                decoration: const InputDecoration(
+                                  hintText: 'Enter sketch name...',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Runtime',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 8),
+                              DropdownButtonFormField<SketchLanguage>(
+                                key: const Key(
+                                  'create_sketch_runtime_dropdown',
+                                ),
+                                initialValue: language,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 12,
+                                  ),
+                                ),
+                                items: SketchLanguage.values
+                                    .map(
+                                      (runtime) => DropdownMenuItem(
+                                        value: runtime,
+                                        child: Text(
+                                          _runtimeDropdownLabel(runtime),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(growable: false),
+                                onChanged: (value) {
+                                  if (value == null) {
+                                    return;
+                                  }
+                                  setDialogState(() => language = value);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      ColoredBox(
+                        color: Colors.white,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(dialogContext).pop(),
+                                  child: const Text('Cancel'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: FilledButton.icon(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFF256AF4),
+                                  ),
+                                  onPressed: () {
+                                    context.read<SketchCatalogBloc>().add(
+                                      SketchCatalogCreateRequested(
+                                        nameController.text,
+                                        language: language,
+                                        code: defaultSketchTemplateFor(
+                                          language,
+                                        ),
+                                      ),
+                                    );
+                                    Navigator.of(dialogContext).pop();
+                                  },
+                                  icon: const Icon(
+                                    Icons.arrow_forward,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Create Sketch'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      nameController.dispose();
+    }
   }
 
   Future<void> _showRenameDialog(
@@ -523,154 +569,14 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _LanguageTile extends StatelessWidget {
-  const _LanguageTile({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Ink(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEFF6FF) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? const Color(0xFF256AF4) : const Color(0xFFE2E8F0),
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: const Color(0xFF256AF4).withValues(alpha: 0.12),
-              ),
-              child: Icon(icon, color: const Color(0xFF256AF4), size: 18),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: selected
-                  ? const Color(0xFF256AF4)
-                  : const Color(0xFF94A3B8),
-            ),
-          ],
-        ),
-      ),
-    );
+String _runtimeDropdownLabel(SketchLanguage language) {
+  switch (language) {
+    case SketchLanguage.processingJava:
+      return 'Processing (.${language.fileExtension})';
+    case SketchLanguage.p5js:
+      return 'p5.js (.${language.fileExtension})';
   }
 }
-
-class _TemplateTile extends StatelessWidget {
-  const _TemplateTile({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Ink(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? const Color(0xFF256AF4) : const Color(0xFFE2E8F0),
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: const Color(0xFF256AF4).withValues(alpha: 0.12),
-              ),
-              child: Icon(icon, color: const Color(0xFF256AF4), size: 18),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: selected
-                  ? const Color(0xFF256AF4)
-                  : const Color(0xFF94A3B8),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-enum _SketchTemplateChoice { blank, defaultStarter }
 
 const List<Color> _thumbnailColors = <Color>[
   Color(0xFF256AF4),

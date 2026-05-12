@@ -81,6 +81,13 @@
   </head>
   <body>
     <div id="editor"></div>
+    <script>
+      window.__p5deQueuedMessages = [];
+      window.__p5deQueueMessage = function (event) {
+        window.__p5deQueuedMessages.push(event.data);
+      };
+      window.addEventListener("message", window.__p5deQueueMessage);
+    </script>
     <script src="editor.bundle.js"></script>
   </body>
 </html>

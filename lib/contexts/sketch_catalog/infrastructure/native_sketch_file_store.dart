@@ -15,7 +15,7 @@ class NativeSketchFileStore {
 
     final file = File(
       '${directory.path}${Platform.pathSeparator}'
-      '${sketch.language.fileName}',
+      '${sketch.language.fileNameForSketchName(sketch.name.value)}',
     );
     await file.writeAsString(sketch.code);
   }

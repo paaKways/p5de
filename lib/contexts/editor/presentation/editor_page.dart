@@ -6,6 +6,7 @@ import 'package:p5de/contexts/editor/application/load_sketch_for_edit.dart';
 import 'package:p5de/contexts/editor/application/save_sketch.dart';
 import 'package:p5de/contexts/editor/presentation/codemirror_editor_view.dart';
 import 'package:p5de/contexts/editor/presentation/editor_bloc.dart';
+import 'package:p5de/contexts/runtime_preview/presentation/runtime_preview_page.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
 import 'package:p5de/shared/clock.dart';
@@ -91,6 +92,18 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
 
   Future<void> _focusEditor() async {
     await _editorKey.currentState?.focusEditor();
+  }
+
+  Future<void> _openRuntimePreview(EditorState state) async {
+    final code = state.draft?.currentCode ?? _sketch.code;
+    final previewSketch = _sketch.copyWith(code: code);
+    _requestSave();
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            RuntimePreviewPage(sketch: previewSketch, initialCode: code),
+      ),
+    );
   }
 
   void _handleEditorChanged(String code) {
@@ -180,7 +193,9 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                     foregroundColor: const Color(0xFF256AF4),
                     minimumSize: const Size(48, 48),
                   ),
-                  onPressed: () {},
+                  onPressed: state.draft == null
+                      ? null
+                      : () => _openRuntimePreview(state),
                 ),
                 IconButton(
                   tooltip: 'Save',
@@ -200,7 +215,11 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
             ),
             body: Column(
               children: [
-                _EditorTabs(activeFileName: _sketch.language.fileName),
+                _EditorTabs(
+                  activeFileName: _sketch.language.fileNameForSketchName(
+                    _sketch.name.value,
+                  ),
+                ),
                 _EditorStatus(
                   languageLabel: _sketch.language.displayName,
                   isDirty: state.isDirty,

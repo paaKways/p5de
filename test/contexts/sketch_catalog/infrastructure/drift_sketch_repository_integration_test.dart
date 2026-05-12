@@ -111,7 +111,9 @@ void main() {
         code: 'void setup() {}',
       );
 
-      final createdFile = File('${sketchesDir.path}/Disk Sketch/Sketch.pde');
+      final createdFile = File(
+        '${sketchesDir.path}/Disk Sketch/Disk Sketch.pde',
+      );
       expect(await createdFile.exists(), isTrue);
       expect(await createdFile.readAsString(), 'void setup() {}');
 
@@ -119,7 +121,7 @@ void main() {
 
       final oldDirectory = Directory('${sketchesDir.path}/Disk Sketch');
       final renamedFile = File(
-        '${sketchesDir.path}/Renamed Disk Sketch/Sketch.pde',
+        '${sketchesDir.path}/Renamed Disk Sketch/Renamed Disk Sketch.pde',
       );
       expect(await oldDirectory.exists(), isFalse);
       expect(await renamedFile.exists(), isTrue);

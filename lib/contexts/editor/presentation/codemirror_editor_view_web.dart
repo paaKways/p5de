@@ -33,7 +33,12 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
   late final String _viewType;
   late final html.IFrameElement _iframe;
   StreamSubscription<html.MessageEvent>? _messageSubscription;
+  Timer? _createEditorRetryTimer;
+  int _createEditorAttempts = 0;
   bool _ready = false;
+
+  static const _createEditorRetryDelay = Duration(milliseconds: 150);
+  static const _maxCreateEditorAttempts = 80;
 
   @override
   void initState() {
@@ -44,13 +49,14 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
       ..style.border = '0'
       ..style.height = '100%'
       ..style.width = '100%';
-    _iframe.onLoad.listen((_) => _createEditor());
+    _iframe.onLoad.listen((_) => _startCreateEditorHandshake());
     _messageSubscription = html.window.onMessage.listen(_handleMessage);
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (_) => _iframe);
   }
 
   @override
   void dispose() {
+    _createEditorRetryTimer?.cancel();
     _messageSubscription?.cancel();
     super.dispose();
   }
@@ -82,6 +88,25 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
     });
   }
 
+  void _startCreateEditorHandshake() {
+    _ready = false;
+    _createEditorAttempts = 0;
+    _createEditorRetryTimer?.cancel();
+    _tryCreateEditor();
+  }
+
+  void _tryCreateEditor() {
+    if (!mounted || _ready) {
+      return;
+    }
+    _createEditor();
+    _createEditorAttempts += 1;
+    if (_createEditorAttempts >= _maxCreateEditorAttempts) {
+      return;
+    }
+    _createEditorRetryTimer = Timer(_createEditorRetryDelay, _tryCreateEditor);
+  }
+
   void _postCommand(String command, Map<String, Object?> payload) {
     _iframe.contentWindow?.postMessage(
       jsonEncode({
@@ -102,6 +127,8 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
     final payload = _normalizePayload(data['payload']);
     if (name == 'editorReady') {
       _ready = true;
+      _createEditorRetryTimer?.cancel();
+      _createEditorRetryTimer = null;
       widget.onReady();
       return;
     }
@@ -128,9 +155,13 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
       return raw.cast<String, Object?>();
     }
     if (raw is String) {
-      final decoded = jsonDecode(raw);
-      if (decoded is Map) {
-        return decoded.cast<String, Object?>();
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          return decoded.cast<String, Object?>();
+        }
+      } catch (_) {
+        return const {};
       }
     }
     return const {};

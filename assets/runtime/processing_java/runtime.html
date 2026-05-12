@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Processing Java Runtime</title>
+    <link rel="stylesheet" href="./runtime.css" />
+  </head>
+  <body>
+    <main id="runtimeStage" class="runtime-stage" aria-label="Processing Java preview">
+      <div id="runtimeMessage" class="runtime-message">Runtime ready</div>
+      <iframe
+        id="runtimeFrame"
+        class="runtime-frame"
+        title="Processing Java sketch output"
+        scrolling="no"
+        sandbox="allow-scripts allow-same-origin"
+      ></iframe>
+    </main>
+
+    <script src="./src/teavmJavacAdapter.js"></script>
+    <script src="./src/wasmProcessingCompiler.js"></script>
+    <script src="./runtime_shell.js"></script>
+  </body>
+</html>

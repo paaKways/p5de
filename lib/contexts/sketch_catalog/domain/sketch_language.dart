@@ -16,6 +16,33 @@ enum SketchLanguage {
   final String displayName;
   final String fileName;
 
+  String get fileExtension {
+    final dotIndex = fileName.lastIndexOf('.');
+    if (dotIndex < 0 || dotIndex == fileName.length - 1) {
+      return '';
+    }
+    return fileName.substring(dotIndex + 1);
+  }
+
+  String fileNameForSketchName(String sketchName) {
+    final trimmedName = sketchName.trim();
+    if (trimmedName.isEmpty) {
+      return fileName;
+    }
+
+    final dotIndex = fileName.lastIndexOf('.');
+    if (dotIndex < 0) {
+      return trimmedName;
+    }
+
+    final extension = fileName.substring(dotIndex);
+    if (trimmedName.toLowerCase().endsWith(extension.toLowerCase())) {
+      return trimmedName;
+    }
+
+    return '$trimmedName$extension';
+  }
+
   static SketchLanguage fromStorageValue(String value) {
     return SketchLanguage.values.firstWhere(
       (language) => language.storageValue == value,

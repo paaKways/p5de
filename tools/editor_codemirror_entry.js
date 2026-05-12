@@ -168,9 +168,16 @@ window.P5deEditor = {
   setCode,
 };
 
-window.addEventListener("message", (event) => {
-  const data =
-    typeof event.data === "string" ? JSON.parse(event.data) : event.data || {};
+function normalizeHostMessage(raw) {
+  try {
+    return typeof raw === "string" ? JSON.parse(raw) : raw || {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function handleHostMessage(raw) {
+  const data = normalizeHostMessage(raw);
   if (data.source !== "p5de-flutter") return;
 
   const payload = data.payload || {};
@@ -189,4 +196,14 @@ window.addEventListener("message", (event) => {
   if (data.command === "focus") {
     focus();
   }
-});
+}
+
+window.addEventListener("message", (event) => handleHostMessage(event.data));
+
+if (window.__p5deQueueMessage) {
+  window.removeEventListener("message", window.__p5deQueueMessage);
+}
+if (Array.isArray(window.__p5deQueuedMessages)) {
+  window.__p5deQueuedMessages.forEach(handleHostMessage);
+  window.__p5deQueuedMessages.length = 0;
+}
