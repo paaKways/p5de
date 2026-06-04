@@ -52,3 +52,7 @@ class RuntimePreviewFirstFrameReceived extends RuntimePreviewEvent {
 class RuntimePreviewStopped extends RuntimePreviewEvent {
   const RuntimePreviewStopped();
 }
+
+class RuntimePreviewWatchdogTimedOut extends RuntimePreviewEvent {
+  const RuntimePreviewWatchdogTimedOut();
+}

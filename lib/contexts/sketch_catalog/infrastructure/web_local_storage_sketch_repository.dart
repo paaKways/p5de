@@ -4,6 +4,7 @@ import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_name.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
+import 'package:p5de/contexts/sketch_catalog/infrastructure/web_local_storage_project_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String kSketchCatalogWebStorageKey = 'p5de.sketch_catalog.v1';
@@ -13,7 +14,9 @@ int _webStorageVersion = 0;
 Future<void> clearSketchCatalogWebStorage() async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.remove(kSketchCatalogWebStorageKey);
+  await prefs.remove(kProjectCatalogWebStorageKey);
   _webStorageVersion++;
+  markProjectCatalogWebStorageCleared();
 }
 
 // Web repository backed by browser storage via shared_preferences.
@@ -75,6 +78,24 @@ class WebLocalStorageSketchRepository implements SketchRepository {
   }
 
   @override
+  Future<List<Sketch>> listFavorites({String? query}) async {
+    await _ensureLoaded();
+    final normalized = query?.trim().toLowerCase();
+    final output = _items
+        .where((item) {
+          if (!item.isFavorite) {
+            return false;
+          }
+          return normalized == null ||
+              normalized.isEmpty ||
+              item.name.normalized.contains(normalized);
+        })
+        .toList(growable: false);
+    output.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return output;
+  }
+
+  @override
   Future<bool> existsByNormalizedName(
     String normalizedName, {
     String? excludingSketchId,
@@ -115,6 +136,7 @@ class WebLocalStorageSketchRepository implements SketchRepository {
                 code: map['code'] as String,
                 createdAt: map['createdAt'] as int,
                 updatedAt: map['updatedAt'] as int,
+                isFavorite: map['isFavorite'] as bool? ?? false,
               );
             }),
           );
@@ -139,6 +161,7 @@ class WebLocalStorageSketchRepository implements SketchRepository {
             'code': item.code,
             'createdAt': item.createdAt,
             'updatedAt': item.updatedAt,
+            'isFavorite': item.isFavorite,
           },
         )
         .toList(growable: false);

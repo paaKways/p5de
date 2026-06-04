@@ -15,6 +15,8 @@ abstract class SketchRepository {
 
   Future<List<Sketch>> list({String? query});
 
+  Future<List<Sketch>> listFavorites({String? query});
+
   Future<bool> existsByNormalizedName(
     String normalizedName, {
     String? excludingSketchId,

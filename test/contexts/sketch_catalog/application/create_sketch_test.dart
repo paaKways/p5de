@@ -20,7 +20,8 @@ void main() {
 
       expect(created.id, 'id-123');
       expect(created.name.value, 'Hello World');
-      expect(created.language, SketchLanguage.p5js);
+      expect(created.language, SketchLanguage.processingJava);
+      expect(created.code, contains('void setup()'));
       expect(repository.items, hasLength(1));
     });
 
@@ -104,6 +105,21 @@ class _InMemorySketchRepository implements SketchRepository {
     final normalized = query.trim().toLowerCase();
     return items
         .where((item) => item.name.normalized.contains(normalized))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<List<Sketch>> listFavorites({String? query}) async {
+    final normalized = query?.trim().toLowerCase();
+    return items
+        .where((item) {
+          if (!item.isFavorite) {
+            return false;
+          }
+          return normalized == null ||
+              normalized.isEmpty ||
+              item.name.normalized.contains(normalized);
+        })
         .toList(growable: false);
   }
 

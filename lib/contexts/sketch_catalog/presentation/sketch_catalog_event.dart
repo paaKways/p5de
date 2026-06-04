@@ -52,3 +52,69 @@ class SketchCatalogDeleteRequested extends SketchCatalogEvent {
   @override
   List<Object?> get props => [sketchId];
 }
+
+class SketchCatalogProjectCreateRequested extends SketchCatalogEvent {
+  const SketchCatalogProjectCreateRequested(
+    this.name, {
+    this.template = ProjectTemplate.empty,
+  });
+
+  final String name;
+  final ProjectTemplate template;
+
+  @override
+  List<Object?> get props => [name, template];
+}
+
+class SketchCatalogProjectRenameRequested extends SketchCatalogEvent {
+  const SketchCatalogProjectRenameRequested({
+    required this.projectId,
+    required this.newName,
+  });
+
+  final String projectId;
+  final String newName;
+
+  @override
+  List<Object?> get props => [projectId, newName];
+}
+
+class SketchCatalogProjectDeleteRequested extends SketchCatalogEvent {
+  const SketchCatalogProjectDeleteRequested(this.projectId);
+
+  final String projectId;
+
+  @override
+  List<Object?> get props => [projectId];
+}
+
+class SketchCatalogFilterChanged extends SketchCatalogEvent {
+  const SketchCatalogFilterChanged(this.filter);
+
+  final SketchCatalogFilter filter;
+
+  @override
+  List<Object?> get props => [filter];
+}
+
+class SketchCatalogFavoriteToggled extends SketchCatalogEvent {
+  const SketchCatalogFavoriteToggled(this.sketchId);
+
+  final String sketchId;
+
+  @override
+  List<Object?> get props => [sketchId];
+}
+
+class SketchCatalogProjectSketchFavoriteToggled extends SketchCatalogEvent {
+  const SketchCatalogProjectSketchFavoriteToggled({
+    required this.projectId,
+    required this.sketchId,
+  });
+
+  final String projectId;
+  final String sketchId;
+
+  @override
+  List<Object?> get props => [projectId, sketchId];
+}

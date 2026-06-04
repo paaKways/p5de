@@ -168,6 +168,11 @@ class _InMemorySketchRepository implements SketchRepository {
   Future<List<Sketch>> list({String? query}) async => _items;
 
   @override
+  Future<List<Sketch>> listFavorites({String? query}) async {
+    return _items.where((item) => item.isFavorite).toList(growable: false);
+  }
+
+  @override
   Future<void> update(Sketch sketch) async {
     final index = _items.indexWhere((item) => item.id == sketch.id);
     if (index < 0) {

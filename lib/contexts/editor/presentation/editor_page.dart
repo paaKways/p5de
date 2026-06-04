@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:p5de/app/telemetry/app_telemetry.dart';
 import 'package:p5de/contexts/editor/application/load_sketch_for_edit.dart';
 import 'package:p5de/contexts/editor/application/save_sketch.dart';
 import 'package:p5de/contexts/editor/presentation/codemirror_editor_view.dart';
 import 'package:p5de/contexts/editor/presentation/editor_bloc.dart';
 import 'package:p5de/contexts/runtime_preview/presentation/runtime_preview_page.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
 import 'package:p5de/shared/clock.dart';
 
@@ -16,12 +18,14 @@ class EditorPage extends StatefulWidget {
     required this.sketch,
     required this.sketchRepository,
     required this.clock,
+    this.telemetry = const NoopAppTelemetry(),
     super.key,
   });
 
   final Sketch sketch;
   final SketchRepository sketchRepository;
   final Clock clock;
+  final AppTelemetry telemetry;
 
   @override
   State<EditorPage> createState() => _EditorPageState();
@@ -35,6 +39,10 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   Timer? _autosaveTimer;
   int _line = 1;
   int _column = 1;
+  bool _hasLoggedEditThisSession = false;
+
+  bool get _runtimeAvailable =>
+      _sketch.language == SketchLanguage.processingJava;
 
   @override
   void initState() {
@@ -46,7 +54,16 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
         repository: widget.sketchRepository,
         clock: widget.clock,
       ),
+      telemetry: widget.telemetry,
     )..add(EditorLoaded(_sketch.id));
+    unawaited(widget.telemetry.setCurrentScreen('editor'));
+    unawaited(widget.telemetry.setCustomKey('current_sketch_id', _sketch.id));
+    unawaited(
+      widget.telemetry.setCustomKey(
+        'current_language',
+        _sketch.language.storageValue,
+      ),
+    );
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -87,6 +104,12 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   void _handleEditorReady() {}
 
   Future<void> _runEditorCommand(String command) async {
+    unawaited(
+      widget.telemetry.logEvent(
+        'editor_command',
+        parameters: {'command': command, 'sketch_id': _sketch.id},
+      ),
+    );
     await _editorKey.currentState?.runCommand(command);
   }
 
@@ -97,16 +120,42 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   Future<void> _openRuntimePreview(EditorState state) async {
     final code = state.draft?.currentCode ?? _sketch.code;
     final previewSketch = _sketch.copyWith(code: code);
+    unawaited(
+      widget.telemetry.logEvent(
+        'runtime_open',
+        parameters: {
+          'sketch_id': _sketch.id,
+          'language': _sketch.language.storageValue,
+          'code_length': code.length,
+        },
+      ),
+    );
     _requestSave();
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            RuntimePreviewPage(sketch: previewSketch, initialCode: code),
+        builder: (_) => RuntimePreviewPage(
+          sketch: previewSketch,
+          initialCode: code,
+          telemetry: widget.telemetry,
+        ),
       ),
     );
+    unawaited(widget.telemetry.setCurrentScreen('editor'));
   }
 
   void _handleEditorChanged(String code) {
+    if (!_hasLoggedEditThisSession) {
+      _hasLoggedEditThisSession = true;
+      unawaited(
+        widget.telemetry.logEvent(
+          'editor_edit',
+          parameters: {
+            'sketch_id': _sketch.id,
+            'language': _sketch.language.storageValue,
+          },
+        ),
+      );
+    }
     _bloc.add(EditorCodeChanged(code));
     _autosaveTimer?.cancel();
     _autosaveTimer = Timer(const Duration(seconds: 1), _requestSave);
@@ -186,14 +235,16 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                   onPressed: () => _runEditorCommand('redo'),
                 ),
                 IconButton(
-                  tooltip: 'Run',
+                  tooltip: _runtimeAvailable
+                      ? 'Run'
+                      : 'p5.js runtime is on hold',
                   icon: const Icon(Icons.play_arrow),
                   style: IconButton.styleFrom(
                     backgroundColor: const Color(0xFFEAF1FF),
                     foregroundColor: const Color(0xFF256AF4),
                     minimumSize: const Size(48, 48),
                   ),
-                  onPressed: state.draft == null
+                  onPressed: state.draft == null || !_runtimeAvailable
                       ? null
                       : () => _openRuntimePreview(state),
                 ),

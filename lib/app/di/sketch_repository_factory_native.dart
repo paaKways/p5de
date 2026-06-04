@@ -1,10 +1,56 @@
+import 'package:p5de/contexts/sketch_catalog/application/sketch_catalog_exporter.dart';
+import 'package:p5de/app/di/sketch_storage_backend.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/project_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
+import 'package:p5de/contexts/sketch_catalog/infrastructure/drift_project_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/drift_sketch_repository.dart';
+import 'package:p5de/contexts/sketch_catalog/infrastructure/filesystem_project_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/filesystem_sketch_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/sketch_catalog_database.dart';
+import 'package:p5de/contexts/sketch_catalog/infrastructure/user_visible_sketch_catalog_exporter.dart';
+import 'package:p5de/contexts/sketch_catalog/infrastructure/user_visible_sketch_mirror.dart';
 
-SketchRepository createSketchRepository() {
-  return FilesystemSketchRepository(
-    legacyRepository: DriftSketchRepository(SketchCatalogDatabase()),
+final _database = SketchCatalogDatabase();
+const _userVisibleSketchMirror = MethodChannelUserVisibleSketchMirror();
+
+SketchRepository createSketchRepository({
+  required SketchStorageBackend storageBackend,
+}) {
+  switch (storageBackend) {
+    case SketchStorageBackend.drift:
+      return DriftSketchRepository(
+        _database,
+        legacyRepository: FilesystemSketchRepository(),
+      );
+    case SketchStorageBackend.filesystem:
+      return FilesystemSketchRepository(
+        userVisibleMirror: _userVisibleSketchMirror,
+      );
+  }
+}
+
+ProjectRepository createProjectRepository({
+  required SketchStorageBackend storageBackend,
+}) {
+  switch (storageBackend) {
+    case SketchStorageBackend.drift:
+      return DriftProjectRepository(
+        _database,
+        legacyRepository: FilesystemProjectRepository(),
+      );
+    case SketchStorageBackend.filesystem:
+      return FilesystemProjectRepository(
+        userVisibleMirror: _userVisibleSketchMirror,
+      );
+  }
+}
+
+SketchCatalogExporter? createSketchCatalogExporter({
+  required SketchRepository sketchRepository,
+  required ProjectRepository projectRepository,
+}) {
+  return UserVisibleSketchCatalogExporter(
+    sketchRepository: sketchRepository,
+    projectRepository: projectRepository,
   );
 }

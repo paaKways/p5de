@@ -48,6 +48,23 @@ class InMemorySketchRepository implements SketchRepository {
   }
 
   @override
+  Future<List<Sketch>> listFavorites({String? query}) async {
+    final normalized = query?.trim().toLowerCase();
+    final output = _items
+        .where((item) {
+          if (!item.isFavorite) {
+            return false;
+          }
+          return normalized == null ||
+              normalized.isEmpty ||
+              item.name.normalized.contains(normalized);
+        })
+        .toList(growable: false);
+    output.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return output;
+  }
+
+  @override
   Future<bool> existsByNormalizedName(
     String normalizedName, {
     String? excludingSketchId,

@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:p5de/app/telemetry/app_telemetry.dart';
 import 'package:p5de/contexts/editor/application/load_sketch_for_edit.dart';
 import 'package:p5de/contexts/editor/application/save_sketch.dart';
 import 'package:p5de/contexts/editor/domain/editor_draft.dart';
@@ -13,8 +16,10 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
   EditorBloc({
     required LoadSketchForEdit loadSketchForEdit,
     required SaveSketch saveSketch,
+    AppTelemetry telemetry = const NoopAppTelemetry(),
   }) : _loadSketchForEdit = loadSketchForEdit,
        _saveSketch = saveSketch,
+       _telemetry = telemetry,
        super(const EditorState()) {
     on<EditorLoaded>(_onLoaded);
     on<EditorCodeChanged>(_onCodeChanged);
@@ -23,13 +28,32 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
 
   final LoadSketchForEdit _loadSketchForEdit;
   final SaveSketch _saveSketch;
+  final AppTelemetry _telemetry;
 
   Future<void> _onLoaded(EditorLoaded event, Emitter<EditorState> emit) async {
     emit(state.copyWith(status: EditorStatus.loading, clearErrorMessage: true));
     try {
       final draft = await _loadSketchForEdit(event.sketchId);
+      unawaited(_telemetry.setCustomKey('current_sketch_id', event.sketchId));
+      unawaited(
+        _telemetry.logEvent(
+          'editor_open',
+          parameters: {
+            'sketch_id': event.sketchId,
+            'language': draft.language.storageValue,
+          },
+        ),
+      );
       emit(state.copyWith(status: EditorStatus.ready, draft: draft));
-    } catch (error) {
+    } catch (error, stackTrace) {
+      unawaited(
+        _telemetry.recordError(
+          error,
+          stackTrace,
+          reason: 'editor_load_failed',
+          parameters: {'sketch_id': event.sketchId},
+        ),
+      );
       emit(
         state.copyWith(
           status: EditorStatus.failure,
@@ -69,6 +93,16 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
     emit(state.copyWith(status: EditorStatus.saving, clearErrorMessage: true));
     try {
       final savedSketch = await _saveSketch(draft);
+      unawaited(
+        _telemetry.logEvent(
+          'editor_save',
+          parameters: {
+            'sketch_id': draft.sketchId,
+            'language': draft.language.storageValue,
+            'code_length': savedSketch.code.length,
+          },
+        ),
+      );
       final savedDraft = draft.copyWith(
         savedCode: savedSketch.code,
         currentCode: savedSketch.code,
@@ -81,7 +115,15 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
           savedSketch: savedSketch,
         ),
       );
-    } catch (error) {
+    } catch (error, stackTrace) {
+      unawaited(
+        _telemetry.recordError(
+          error,
+          stackTrace,
+          reason: 'editor_save_failed',
+          parameters: {'sketch_id': draft.sketchId},
+        ),
+      );
       emit(
         state.copyWith(
           status: EditorStatus.ready,

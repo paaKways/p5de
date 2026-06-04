@@ -1,0 +1,135 @@
+import 'package:p5de/contexts/sketch_catalog/domain/project.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/project_repository.dart';
+import 'package:p5de/contexts/sketch_catalog/application/project_templates.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
+import 'package:flutter/services.dart';
+import 'package:p5de/shared/clock.dart';
+import 'package:p5de/shared/id_generator.dart';
+
+enum ProjectCreationStage {
+  creatingProject,
+  loadingTemplate,
+  preparingSketches,
+  syncingProject,
+  complete,
+}
+
+class ProjectCreationProgress {
+  const ProjectCreationProgress({
+    required this.stage,
+    this.completed = 0,
+    this.total = 0,
+  });
+
+  final ProjectCreationStage stage;
+  final int completed;
+  final int total;
+
+  double? get value {
+    if (stage != ProjectCreationStage.preparingSketches || total <= 0) {
+      return null;
+    }
+    return completed / total;
+  }
+
+  String get label {
+    switch (stage) {
+      case ProjectCreationStage.creatingProject:
+        return 'Creating project...';
+      case ProjectCreationStage.loadingTemplate:
+        return 'Loading project template...';
+      case ProjectCreationStage.preparingSketches:
+        return 'Preparing $completed of $total sketches...';
+      case ProjectCreationStage.syncingProject:
+        return 'Syncing project files...';
+      case ProjectCreationStage.complete:
+        return 'Project ready.';
+    }
+  }
+}
+
+typedef ProjectCreationProgressCallback =
+    void Function(ProjectCreationProgress progress);
+
+class CreateProject {
+  CreateProject(
+    this._repository, {
+    required Clock clock,
+    required IdGenerator idGenerator,
+    AssetBundle? bundle,
+  }) : _clock = clock,
+       _idGenerator = idGenerator,
+       _bundle = bundle ?? rootBundle;
+
+  final ProjectRepository _repository;
+  final Clock _clock;
+  final IdGenerator _idGenerator;
+  final AssetBundle _bundle;
+
+  Future<Project> call({
+    required String name,
+    ProjectTemplate template = ProjectTemplate.empty,
+    ProjectCreationProgressCallback? onProgress,
+  }) async {
+    onProgress?.call(
+      const ProjectCreationProgress(
+        stage: ProjectCreationStage.creatingProject,
+      ),
+    );
+    final project = await _repository.create(name: name);
+    onProgress?.call(
+      const ProjectCreationProgress(
+        stage: ProjectCreationStage.loadingTemplate,
+      ),
+    );
+    final bundledTemplate = await BundledProjectTemplate.load(
+      template,
+      bundle: _bundle,
+    );
+    if (bundledTemplate == null) {
+      onProgress?.call(
+        const ProjectCreationProgress(stage: ProjectCreationStage.complete),
+      );
+      return project;
+    }
+
+    final sketches = <Sketch>[];
+    for (var index = 0; index < bundledTemplate.sketches.length; index++) {
+      final sketchSeed = bundledTemplate.sketches[index];
+      sketches.add(
+        await sketchSeed.toSketch(
+          bundle: _bundle,
+          idGenerator: _idGenerator,
+          clock: _clock,
+          language: bundledTemplate.language,
+          offset: index,
+        ),
+      );
+      onProgress?.call(
+        ProjectCreationProgress(
+          stage: ProjectCreationStage.preparingSketches,
+          completed: index + 1,
+          total: bundledTemplate.sketches.length,
+        ),
+      );
+    }
+
+    onProgress?.call(
+      ProjectCreationProgress(
+        stage: ProjectCreationStage.syncingProject,
+        completed: sketches.length,
+        total: sketches.length,
+      ),
+    );
+    await _repository.createSketches(project.id, sketches);
+    onProgress?.call(
+      ProjectCreationProgress(
+        stage: ProjectCreationStage.complete,
+        completed: sketches.length,
+        total: sketches.length,
+      ),
+    );
+
+    return project;
+  }
+}

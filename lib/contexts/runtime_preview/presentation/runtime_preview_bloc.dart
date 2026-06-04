@@ -14,6 +14,7 @@ class RuntimePreviewBloc
     on<RuntimePreviewErrorReceived>(_onErrorReceived);
     on<RuntimePreviewFirstFrameReceived>(_onFirstFrameReceived);
     on<RuntimePreviewStopped>(_onStopped);
+    on<RuntimePreviewWatchdogTimedOut>(_onWatchdogTimedOut);
   }
 
   void _onRunStarted(
@@ -112,6 +113,28 @@ class RuntimePreviewBloc
       state.copyWith(
         status: RuntimePreviewStatus.stopped,
         clearErrorMessage: true,
+      ),
+    );
+  }
+
+  void _onWatchdogTimedOut(
+    RuntimePreviewWatchdogTimedOut event,
+    Emitter<RuntimePreviewState> emit,
+  ) {
+    const message =
+        'Processing Java runtime did not reach first frame within 60 seconds. '
+        'The runtime was stopped so the sketch can be revised or restarted.';
+    emit(
+      state.copyWith(
+        status: RuntimePreviewStatus.failure,
+        consoleEntries: [
+          ...state.consoleEntries,
+          const RuntimeConsoleEntry(
+            level: RuntimeConsoleLevel.error,
+            message: message,
+          ),
+        ],
+        errorMessage: message,
       ),
     );
   }

@@ -21,7 +21,7 @@ class CreateSketch {
 
   Future<Sketch> call({
     required String name,
-    SketchLanguage language = SketchLanguage.p5js,
+    SketchLanguage language = SketchLanguage.processingJava,
     String? code,
   }) async {
     final sketchName = SketchName(name);

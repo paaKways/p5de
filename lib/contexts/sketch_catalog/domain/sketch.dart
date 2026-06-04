@@ -10,6 +10,7 @@ class Sketch extends Equatable {
     required this.code,
     required this.createdAt,
     required this.updatedAt,
+    this.isFavorite = false,
   });
 
   final String id;
@@ -18,8 +19,14 @@ class Sketch extends Equatable {
   final String code;
   final int createdAt;
   final int updatedAt;
+  final bool isFavorite;
 
-  Sketch copyWith({SketchName? name, String? code, int? updatedAt}) {
+  Sketch copyWith({
+    SketchName? name,
+    String? code,
+    int? updatedAt,
+    bool? isFavorite,
+  }) {
     return Sketch(
       id: id,
       name: name ?? this.name,
@@ -27,6 +34,7 @@ class Sketch extends Equatable {
       code: code ?? this.code,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 
@@ -38,5 +46,6 @@ class Sketch extends Equatable {
     code,
     createdAt,
     updatedAt,
+    isFavorite,
   ];
 }

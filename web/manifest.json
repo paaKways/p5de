@@ -1,6 +1,6 @@
 {
-    "name": "p5de",
-    "short_name": "p5de",
+    "name": "SuaCode IDE",
+    "short_name": "SuaCode IDE",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

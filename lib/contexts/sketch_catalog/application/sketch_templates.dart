@@ -27,5 +27,7 @@ String defaultSketchTemplateFor(SketchLanguage language) {
   };
 }
 
-@Deprecated('Use kDefaultP5jsSketchTemplate or defaultSketchTemplateFor.')
-const String kDefaultSketchTemplate = kDefaultP5jsSketchTemplate;
+@Deprecated(
+  'Use kDefaultProcessingJavaSketchTemplate or defaultSketchTemplateFor.',
+)
+const String kDefaultSketchTemplate = kDefaultProcessingJavaSketchTemplate;

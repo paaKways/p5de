@@ -6,29 +6,35 @@ import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_name.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
+import 'package:p5de/contexts/sketch_catalog/infrastructure/user_visible_sketch_mirror.dart';
 
 class FilesystemSketchRepository implements SketchRepository {
   FilesystemSketchRepository({
     Directory? rootDirectory,
     SketchRepository? legacyRepository,
+    UserVisibleSketchMirror? userVisibleMirror,
   }) : _rootDirectory = rootDirectory,
-       _legacyRepository = legacyRepository;
+       _legacyRepository = legacyRepository,
+       _userVisibleMirror = userVisibleMirror;
 
   static const String _metadataFileName = '.p5de.json';
   static const String _migrationMarkerFileName = '.p5de_sqlite_migrated';
 
   final Directory? _rootDirectory;
   final SketchRepository? _legacyRepository;
+  final UserVisibleSketchMirror? _userVisibleMirror;
 
   @override
   Future<void> create(Sketch sketch) async {
     await _writeSketch(sketch, previousDirectory: null);
+    await _syncUserVisibleMirror();
   }
 
   @override
   Future<void> update(Sketch sketch) async {
     final previousDirectory = await _directoryForId(sketch.id);
     await _writeSketch(sketch, previousDirectory: previousDirectory);
+    await _syncUserVisibleMirror();
   }
 
   @override
@@ -36,6 +42,7 @@ class FilesystemSketchRepository implements SketchRepository {
     final directory = await _directoryForId(sketchId);
     if (directory != null && await directory.exists()) {
       await directory.delete(recursive: true);
+      await _syncUserVisibleMirror();
     }
   }
 
@@ -54,6 +61,9 @@ class FilesystemSketchRepository implements SketchRepository {
   Future<List<Sketch>> list({String? query}) async {
     await _migrateLegacySketchesIfNeeded();
     final sketches = await _readAllFromDisk();
+    if (query == null || query.trim().isEmpty) {
+      await _syncUserVisibleMirror();
+    }
     final normalizedQuery = query?.trim().toLowerCase();
     final filtered = normalizedQuery == null || normalizedQuery.isEmpty
         ? sketches
@@ -64,6 +74,14 @@ class FilesystemSketchRepository implements SketchRepository {
               .toList(growable: false);
     filtered.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return filtered;
+  }
+
+  @override
+  Future<List<Sketch>> listFavorites({String? query}) async {
+    await _migrateLegacySketchesIfNeeded();
+    final sketches = await _readFavoritesFromDisk(query: query);
+    sketches.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return sketches;
   }
 
   Future<List<Sketch>> _readAllFromDisk() async {
@@ -80,6 +98,33 @@ class FilesystemSketchRepository implements SketchRepository {
       }
       final sketch = await _readSketch(entity);
       if (sketch != null) {
+        sketches.add(sketch);
+      }
+    }
+    return sketches;
+  }
+
+  Future<List<Sketch>> _readFavoritesFromDisk({String? query}) async {
+    final root = await _root();
+    if (!await root.exists()) {
+      await root.create(recursive: true);
+      return const [];
+    }
+
+    final normalizedQuery = query?.trim().toLowerCase();
+    final sketches = <Sketch>[];
+    await for (final entity in root.list(followLinks: false)) {
+      if (entity is! Directory || _isHiddenDirectory(entity)) {
+        continue;
+      }
+      final summary = await _readSketchSummary(entity);
+      if (summary == null ||
+          !summary.isFavorite ||
+          !_matchesQuery(summary.name, normalizedQuery)) {
+        continue;
+      }
+      final sketch = await _readSketch(entity);
+      if (sketch != null && sketch.isFavorite) {
         sketches.add(sketch);
       }
     }
@@ -129,6 +174,19 @@ class FilesystemSketchRepository implements SketchRepository {
       diskNames.add(sketch.name.normalized);
     }
     await marker.writeAsString(DateTime.now().toUtc().toIso8601String());
+    await _syncUserVisibleMirror();
+  }
+
+  Future<void> _syncUserVisibleMirror() async {
+    final mirror = _userVisibleMirror;
+    if (mirror == null) {
+      return;
+    }
+    try {
+      await mirror.syncFrom(await _root());
+    } catch (_) {
+      // The public Documents mirror is a convenience, not source of truth.
+    }
   }
 
   Future<void> _writeSketch(
@@ -192,6 +250,7 @@ class FilesystemSketchRepository implements SketchRepository {
           _intMetadata(metadata, 'createdAt') ?? now.millisecondsSinceEpoch,
       updatedAt:
           _intMetadata(metadata, 'updatedAt') ?? now.millisecondsSinceEpoch,
+      isFavorite: _boolMetadata(metadata, 'isFavorite') ?? false,
     );
 
     if (metadata == null) {
@@ -200,6 +259,28 @@ class FilesystemSketchRepository implements SketchRepository {
       ).writeAsString(jsonEncode(_toMetadata(sketch)));
     }
     return sketch;
+  }
+
+  Future<_SketchSummary?> _readSketchSummary(Directory directory) async {
+    final metadata = await _readMetadata(directory);
+    final sourceFile = await _sourceFileFor(directory, metadata);
+    if (sourceFile == null) {
+      return null;
+    }
+
+    final fallbackName = sourceFile.hasDefaultName
+        ? _nameFromDirectory(directory)
+        : _fileNameFromPath(sourceFile.file.path);
+    final rawName = _stringMetadata(metadata, 'name') ?? fallbackName;
+    final name = SketchName(rawName);
+    final modified = await sourceFile.file.lastModified();
+    return _SketchSummary(
+      name: name,
+      updatedAt:
+          _intMetadata(metadata, 'updatedAt') ??
+          modified.millisecondsSinceEpoch,
+      isFavorite: _boolMetadata(metadata, 'isFavorite') ?? false,
+    );
   }
 
   Future<Map<String, Object?>?> _readMetadata(Directory directory) async {
@@ -429,6 +510,7 @@ class FilesystemSketchRepository implements SketchRepository {
       ),
       'createdAt': sketch.createdAt,
       'updatedAt': sketch.updatedAt,
+      'isFavorite': sketch.isFavorite,
     };
   }
 
@@ -477,6 +559,12 @@ class FilesystemSketchRepository implements SketchRepository {
     return _nameFromDirectory(directory).startsWith('.');
   }
 
+  bool _matchesQuery(SketchName name, String? normalizedQuery) {
+    return normalizedQuery == null ||
+        normalizedQuery.isEmpty ||
+        name.normalized.contains(normalizedQuery);
+  }
+
   String? _stringMetadata(Map<String, Object?>? metadata, String key) {
     final value = metadata?[key];
     return value is String && value.trim().isNotEmpty ? value : null;
@@ -485,6 +573,11 @@ class FilesystemSketchRepository implements SketchRepository {
   int? _intMetadata(Map<String, Object?>? metadata, String key) {
     final value = metadata?[key];
     return value is int ? value : null;
+  }
+
+  bool? _boolMetadata(Map<String, Object?>? metadata, String key) {
+    final value = metadata?[key];
+    return value is bool ? value : null;
   }
 }
 
@@ -498,4 +591,16 @@ class _SketchSourceFile {
   final File file;
   final SketchLanguage language;
   final bool hasDefaultName;
+}
+
+class _SketchSummary {
+  const _SketchSummary({
+    required this.name,
+    required this.updatedAt,
+    required this.isFavorite,
+  });
+
+  final SketchName name;
+  final int updatedAt;
+  final bool isFavorite;
 }
