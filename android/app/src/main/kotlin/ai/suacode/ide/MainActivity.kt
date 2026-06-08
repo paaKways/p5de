@@ -13,7 +13,7 @@ import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val channelName = "ai.suacode.ide/user_visible_sketches"
-    private val publicRootLabel = "Documents/SuaCode IDE/sketches"
+    private val publicRootLabel = "Download/SuaCode IDE/sketches"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -53,7 +53,7 @@ class MainActivity : FlutterActivity() {
     private fun syncWithMediaStore(sourceRoot: File) {
         val resolver = applicationContext.contentResolver
         val collection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        val baseRelativePath = "${Environment.DIRECTORY_DOCUMENTS}/SuaCode IDE/sketches/"
+        val baseRelativePath = "${Environment.DIRECTORY_DOWNLOADS}/SuaCode IDE/sketches/"
         deleteMediaStoreMirror(collection, baseRelativePath)
         if (!sourceRoot.exists()) {
             return
@@ -107,7 +107,7 @@ class MainActivity : FlutterActivity() {
     private fun syncWithPublicFiles(sourceRoot: File) {
         @Suppress("DEPRECATION")
         val targetRoot = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
             "SuaCode IDE/sketches",
         )
         if (targetRoot.exists()) {

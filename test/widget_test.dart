@@ -531,13 +531,13 @@ class _RecordingSketchCatalogExporter implements SketchCatalogExporter {
 
   @override
   Future<String> exportAll() async {
-    return 'Documents/SuaCode IDE/sketches';
+    return 'Download/SuaCode IDE/sketches';
   }
 
   @override
   Future<String> exportItems(Iterable<SketchCatalogExportItem> items) async {
     exportedItems = items.toList(growable: false);
-    return 'Documents/SuaCode IDE/sketches';
+    return 'Download/SuaCode IDE/sketches';
   }
 }
 

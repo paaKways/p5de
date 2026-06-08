@@ -51,7 +51,7 @@ void main() {
 
       final exportedPath = await exporter.exportAll();
 
-      expect(exportedPath, 'Documents/SuaCode IDE/sketches');
+      expect(exportedPath, 'Download/SuaCode IDE/sketches');
       expect(mirror.syncedSource?.path, stagingRoot.path);
       await expectLater(
         File(
@@ -126,7 +126,7 @@ void main() {
         ),
       ]);
 
-      expect(exportedPath, 'Documents/SuaCode IDE/sketches');
+      expect(exportedPath, 'Download/SuaCode IDE/sketches');
       expect(mirror.syncedSource?.path, stagingRoot.path);
       expect(
         await File(

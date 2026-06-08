@@ -90,7 +90,7 @@ class UserVisibleSketchCatalogExporter implements SketchCatalogExporter {
       await _writeSketch(sketchDirectory, item.sketch);
     }
     await _mirror.syncFrom(root);
-    return 'Documents/SuaCode IDE/sketches';
+    return 'Download/SuaCode IDE/sketches';
   }
 
   Future<void> _writeSketch(Directory directory, Sketch sketch) async {

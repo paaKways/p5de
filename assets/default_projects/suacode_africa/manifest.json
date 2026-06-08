@@ -4,115 +4,115 @@
     "language":  "processing_java",
     "sketches":  [
                      {
-                         "name":  "Intro",
+                         "name":  "intro",
                          "asset":  "assets/default_projects/suacode_africa/sketches/Intro.pde"
                      },
                      {
-                         "name":  "Circle",
+                         "name":  "circle",
                          "asset":  "assets/default_projects/suacode_africa/sketches/circle.pde"
                      },
                      {
-                         "name":  "Square",
+                         "name":  "square",
                          "asset":  "assets/default_projects/suacode_africa/sketches/square.pde"
                      },
                      {
-                         "name":  "Shapes",
+                         "name":  "shapes",
                          "asset":  "assets/default_projects/suacode_africa/sketches/shapes.pde"
                      },
                      {
-                         "name":  "Assignment 1",
+                         "name":  "Assignment1",
                          "asset":  "assets/default_projects/suacode_africa/sketches/Assignment1.pde"
                      },
                      {
-                         "name":  "Change Background",
+                         "name":  "change_background",
                          "asset":  "assets/default_projects/suacode_africa/sketches/change_background.pde"
                      },
                      {
-                         "name":  "Change Background Continuous",
+                         "name":  "change_background_continuous",
                          "asset":  "assets/default_projects/suacode_africa/sketches/change_background_continuous.pde"
                      },
                      {
-                         "name":  "Start Moving Ball",
+                         "name":  "start_moving_ball",
                          "asset":  "assets/default_projects/suacode_africa/sketches/start_moving_ball.pde"
                      },
                      {
-                         "name":  "Assignment 2",
+                         "name":  "Assignment2",
                          "asset":  "assets/default_projects/suacode_africa/sketches/Assignment2.pde"
                      },
                      {
-                         "name":  "Bounce Ball",
+                         "name":  "bounce_ball",
                          "asset":  "assets/default_projects/suacode_africa/sketches/bounce_ball.pde"
                      },
                      {
-                         "name":  "Change Ball Color",
+                         "name":  "change_ball_color",
                          "asset":  "assets/default_projects/suacode_africa/sketches/change_ball_color.pde"
                      },
                      {
-                         "name":  "Change Ball Color 2",
+                         "name":  "change_ball_color2",
                          "asset":  "assets/default_projects/suacode_africa/sketches/change_ball_color2.pde"
                      },
                      {
-                         "name":  "Ball Overlaps Paddle",
+                         "name":  "ball_overlaps_paddle",
                          "asset":  "assets/default_projects/suacode_africa/sketches/ball_overlaps_paddle.pde"
                      },
                      {
-                         "name":  "Assignment 3",
+                         "name":  "Assignment3",
                          "asset":  "assets/default_projects/suacode_africa/sketches/Assignment3.pde"
                      },
                      {
-                         "name":  "Paddle",
+                         "name":  "paddle",
                          "asset":  "assets/default_projects/suacode_africa/sketches/paddle.pde"
                      },
                      {
-                         "name":  "Move Paddle",
+                         "name":  "move_paddle",
                          "asset":  "assets/default_projects/suacode_africa/sketches/move_paddle.pde"
                      },
                      {
-                         "name":  "Left Right Color Control",
+                         "name":  "left_right_color_control",
                          "asset":  "assets/default_projects/suacode_africa/sketches/left_right_color_control.pde"
                      },
                      {
-                         "name":  "Assignment 4",
+                         "name":  "Assignment4",
                          "asset":  "assets/default_projects/suacode_africa/sketches/Assignment4.pde"
                      },
                      {
-                         "name":  "Wanderers",
+                         "name":  "wanderers",
                          "asset":  "assets/default_projects/suacode_africa/sketches/wanderers.pde"
                      },
                      {
-                         "name":  "Wanderer List",
+                         "name":  "wanderer_list",
                          "asset":  "assets/default_projects/suacode_africa/sketches/wanderer_list.pde"
                      },
                      {
-                         "name":  "Assignment 5",
+                         "name":  "Assignment5",
                          "asset":  "assets/default_projects/suacode_africa/sketches/Assignment5.pde"
                      },
                      {
-                         "name":  "Concentric Circles No Loop",
+                         "name":  "concentric_circles_no_loop",
                          "asset":  "assets/default_projects/suacode_africa/sketches/concentric_circles_no_loop.pde"
                      },
                      {
-                         "name":  "Concentric Circles For Loop",
+                         "name":  "concentric_circles_for_loop",
                          "asset":  "assets/default_projects/suacode_africa/sketches/concentric_circles_for_loop.pde"
                      },
                      {
-                         "name":  "Concentric Circles While Loop",
+                         "name":  "concentric_circles_while_loop",
                          "asset":  "assets/default_projects/suacode_africa/sketches/concentric_circles_while_loop.pde"
                      },
                      {
-                         "name":  "Ellipse Array",
+                         "name":  "ellipse_array",
                          "asset":  "assets/default_projects/suacode_africa/sketches/ellipse_array.pde"
                      },
                      {
-                         "name":  "Ellipse Array Loops",
+                         "name":  "ellipse_array_loops",
                          "asset":  "assets/default_projects/suacode_africa/sketches/ellipse_array_loops.pde"
                      },
                      {
-                         "name":  "Screen Grapher",
+                         "name":  "screen_grapher",
                          "asset":  "assets/default_projects/suacode_africa/sketches/screen_grapher.pde"
                      },
                      {
-                         "name":  "Assignment 6",
+                         "name":  "Assignment6",
                          "asset":  "assets/default_projects/suacode_africa/sketches/Assignment6.pde"
                      }
                  ]

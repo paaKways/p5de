@@ -212,7 +212,7 @@ loadP5deEditorBundle();
         javaScriptEnabled: true,
         transparentBackground: true,
         supportZoom: false,
-        disableContextMenu: true,
+        disableContextMenu: false,
         allowFileAccess: false,
         allowContentAccess: false,
         allowFileAccessFromFileURLs: false,

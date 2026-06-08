@@ -45,14 +45,15 @@ class RuntimePreviewBloc
     RuntimePreviewLogReceived event,
     Emitter<RuntimePreviewState> emit,
   ) {
-    if (event.message.trim().isEmpty) {
+    final message = _stripPhaseLog(event.message);
+    if (message.trim().isEmpty) {
       return;
     }
     emit(
       state.copyWith(
         consoleEntries: [
           ...state.consoleEntries,
-          RuntimeConsoleEntry(level: event.level, message: event.message),
+          RuntimeConsoleEntry(level: event.level, message: message),
         ],
       ),
     );
@@ -148,5 +149,14 @@ class RuntimePreviewBloc
       'failure' => RuntimePreviewStatus.failure,
       _ => state.status,
     };
+  }
+
+  String _stripPhaseLog(String message) {
+    return message
+        .replaceAll(
+          RegExp(r'(^|\n)Phase log:\n(?:- .*(?:\n|$))+', multiLine: true),
+          '\n',
+        )
+        .trim();
   }
 }

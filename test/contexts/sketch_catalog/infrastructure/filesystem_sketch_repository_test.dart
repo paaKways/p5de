@@ -24,6 +24,25 @@ import 'package:p5de/shared/clock.dart';
 import 'package:p5de/shared/id_generator.dart';
 
 void main() {
+  test('lists empty catalog when root directory does not exist yet', () async {
+    final tempDir = await Directory.systemTemp.createTemp(
+      'p5de_missing_root_repo_test_',
+    );
+    final missingRoot = Directory('${tempDir.path}/sketches');
+
+    try {
+      final repository = FilesystemSketchRepository(rootDirectory: missingRoot);
+
+      expect(await repository.list(), isEmpty);
+      expect(await repository.listFavorites(), isEmpty);
+      expect(await missingRoot.exists(), isTrue);
+    } finally {
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
+    }
+  });
+
   test('uses sketch folders as the native source of truth', () async {
     final tempDir = await Directory.systemTemp.createTemp(
       'p5de_filesystem_repo_test_',

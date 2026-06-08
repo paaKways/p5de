@@ -48,11 +48,34 @@ class NoopAppTelemetry extends AppTelemetry {
     String? reason,
     bool fatal = false,
     Map<String, Object?> parameters = const {},
-  }) async {}
+  }) async {
+    if (!kDebugMode) {
+      return;
+    }
+    debugPrint(
+      'Noop telemetry error'
+      '${reason == null ? '' : ' ($reason)'}'
+      '${fatal ? ' [fatal]' : ''}: $error',
+    );
+    if (parameters.isNotEmpty) {
+      debugPrint('Noop telemetry parameters: $parameters');
+    }
+    debugPrintStack(stackTrace: stackTrace);
+  }
 
   @override
   Future<void> recordFlutterError(
     FlutterErrorDetails details, {
     bool fatal = false,
-  }) async {}
+  }) async {
+    if (!kDebugMode) {
+      return;
+    }
+    debugPrint(
+      'Noop telemetry Flutter error'
+      '${details.context == null ? '' : ' (${details.context})'}'
+      '${fatal ? ' [fatal]' : ''}: ${details.exception}',
+    );
+    debugPrintStack(stackTrace: details.stack);
+  }
 }

@@ -253,7 +253,7 @@ class FilesystemProjectRepository implements ProjectRepository {
     try {
       await mirror.syncFrom(await _root());
     } catch (_) {
-      // The public Documents mirror is a convenience, not source of truth.
+      // The public Download mirror is a convenience, not source of truth.
     }
   }
 

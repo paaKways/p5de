@@ -99,13 +99,19 @@
   function logResult(result) {
     var log = result && result.log ? String(result.log) : "";
     var diagnosticsText = summarizeDiagnostics(mappedDiagnostics(result));
-    var text = diagnosticsText ? log + "\n\n" + diagnosticsText : log;
+    var text = diagnosticsText || stripPhaseLog(log);
     if (text.trim()) {
       post("runtimeLog", {
         level: result && result.status === "compile-error" ? "error" : "info",
         message: text.trim()
       });
     }
+  }
+
+  function stripPhaseLog(text) {
+    return String(text || "")
+      .replace(/(^|\n)Phase log:\n(?:- .*(?:\n|$))+/g, "$1")
+      .trim();
   }
 
   function createFrameBridgeScript(generation) {

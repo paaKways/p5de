@@ -68,6 +68,41 @@ void main() {
     );
 
     blocTest<RuntimePreviewBloc, RuntimePreviewState>(
+      'hides compiler phase log from console output',
+      build: RuntimePreviewBloc.new,
+      act: (bloc) {
+        bloc
+          ..add(const RuntimePreviewRunStarted())
+          ..add(
+            const RuntimePreviewLogReceived(
+              level: RuntimeConsoleLevel.error,
+              message:
+                  'Phase log:\n'
+                  '- Loading teavm-javac runtime\n'
+                  '- Running javac\n\n'
+                  'Diagnostics:\n'
+                  '[ERROR/ERROR] Sketch.pde:4 - missing semicolon',
+            ),
+          );
+      },
+      expect: () => [
+        const RuntimePreviewState(status: RuntimePreviewStatus.starting),
+        isA<RuntimePreviewState>()
+            .having(
+              (state) => state.consoleEntries.single.message,
+              'message',
+              'Diagnostics:\n'
+                  '[ERROR/ERROR] Sketch.pde:4 - missing semicolon',
+            )
+            .having(
+              (state) => state.consoleEntries.single.message,
+              'hidden phase log',
+              isNot(contains('Phase log')),
+            ),
+      ],
+    );
+
+    blocTest<RuntimePreviewBloc, RuntimePreviewState>(
       'records watchdog timeout as recoverable runtime failure',
       build: RuntimePreviewBloc.new,
       act: (bloc) {

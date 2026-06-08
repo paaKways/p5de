@@ -113,10 +113,6 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     await _editorKey.currentState?.runCommand(command);
   }
 
-  Future<void> _focusEditor() async {
-    await _editorKey.currentState?.focusEditor();
-  }
-
   Future<void> _openRuntimePreview(EditorState state) async {
     final code = state.draft?.currentCode ?? _sketch.code;
     final previewSketch = _sketch.copyWith(code: code);
@@ -291,7 +287,6 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                   line: _line,
                   column: _column,
                   onFind: () => _runEditorCommand('find'),
-                  onConsole: _focusEditor,
                 ),
               ],
             ),
@@ -510,13 +505,11 @@ class _EditorBottomActions extends StatelessWidget {
     required this.line,
     required this.column,
     required this.onFind,
-    required this.onConsole,
   });
 
   final int line;
   final int column;
   final VoidCallback onFind;
-  final VoidCallback onConsole;
 
   @override
   Widget build(BuildContext context) {
@@ -536,28 +529,6 @@ class _EditorBottomActions extends StatelessWidget {
                   SizedBox(width: 8),
                   Text(
                     'Find',
-                    style: TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 22),
-          InkWell(
-            onTap: onConsole,
-            borderRadius: BorderRadius.circular(8),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Row(
-                children: [
-                  Icon(Icons.terminal, color: Color(0xFF64748B)),
-                  SizedBox(width: 8),
-                  Text(
-                    'Console',
                     style: TextStyle(
                       color: Color(0xFF64748B),
                       fontSize: 16,

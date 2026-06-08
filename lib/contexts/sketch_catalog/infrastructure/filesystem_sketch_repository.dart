@@ -88,7 +88,7 @@ class FilesystemSketchRepository implements SketchRepository {
     final root = await _root();
     if (!await root.exists()) {
       await root.create(recursive: true);
-      return const [];
+      return <Sketch>[];
     }
 
     final sketches = <Sketch>[];
@@ -108,7 +108,7 @@ class FilesystemSketchRepository implements SketchRepository {
     final root = await _root();
     if (!await root.exists()) {
       await root.create(recursive: true);
-      return const [];
+      return <Sketch>[];
     }
 
     final normalizedQuery = query?.trim().toLowerCase();
@@ -185,7 +185,7 @@ class FilesystemSketchRepository implements SketchRepository {
     try {
       await mirror.syncFrom(await _root());
     } catch (_) {
-      // The public Documents mirror is a convenience, not source of truth.
+      // The public Download mirror is a convenience, not source of truth.
     }
   }
 
