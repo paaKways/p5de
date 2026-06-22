@@ -1,7 +1,10 @@
 import {
+  deleteTrailingWhitespace,
   defaultKeymap,
   history,
   historyKeymap,
+  indentWithTab,
+  insertTab,
   redo,
   undo,
 } from "@codemirror/commands";
@@ -10,10 +13,22 @@ import { java } from "@codemirror/lang-java";
 import {
   bracketMatching,
   defaultHighlightStyle,
+  forceParsing,
   indentOnInput,
+  indentRange,
   syntaxHighlighting,
 } from "@codemirror/language";
-import { openSearchPanel, search, searchKeymap } from "@codemirror/search";
+import {
+  closeSearchPanel,
+  findNext,
+  findPrevious,
+  getSearchQuery,
+  openSearchPanel,
+  search,
+  searchKeymap,
+  SearchQuery,
+  setSearchQuery,
+} from "@codemirror/search";
 import { EditorState, Transaction } from "@codemirror/state";
 import {
   EditorView,
@@ -62,6 +77,118 @@ function notifyCodeChanged() {
   notifyCursor();
 }
 
+class P5deFindPanel {
+  constructor(editorView) {
+    this.view = editorView;
+    this.query = getSearchQuery(editorView.state);
+    this.commit = this.commit.bind(this);
+    this.keydown = this.keydown.bind(this);
+
+    this.searchField = document.createElement("input");
+    this.searchField.value = this.query.search;
+    this.searchField.placeholder = "Find";
+    this.searchField.setAttribute("aria-label", "Find");
+    this.searchField.setAttribute("main-field", "true");
+    this.searchField.className = "cm-textfield p5de-find-input";
+    this.searchField.addEventListener("input", this.commit);
+    this.searchField.addEventListener("keydown", this.keydown);
+
+    const previousButton = this.createButton("‹", "Previous match", () => {
+      this.commit();
+      findPrevious(this.view);
+    });
+    previousButton.classList.add("p5de-find-caret");
+    const nextButton = this.createButton("›", "Next match", () => {
+      this.commit();
+      findNext(this.view);
+    });
+    nextButton.classList.add("p5de-find-caret");
+    const closeButton = this.createButton("×", "Close find", () => {
+      closeSearchPanel(this.view);
+    });
+    closeButton.classList.add("p5de-find-close");
+
+    const topRow = document.createElement("div");
+    topRow.className = "p5de-find-row";
+    topRow.append(this.searchField, previousButton, nextButton, closeButton);
+
+    this.dom = document.createElement("div");
+    this.dom.className = "cm-search p5de-find-panel";
+    this.dom.append(topRow);
+  }
+
+  createButton(label, ariaLabel, onClick) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "p5de-find-button";
+    button.setAttribute("aria-label", ariaLabel);
+    button.textContent = label;
+    button.addEventListener("click", onClick);
+    return button;
+  }
+
+  commit() {
+    const nextQuery = new SearchQuery({
+      search: this.searchField.value,
+      caseSensitive: this.query.caseSensitive,
+      literal: this.query.literal,
+      regexp: this.query.regexp,
+      wholeWord: this.query.wholeWord,
+    });
+    if (!nextQuery.eq(this.query)) {
+      this.query = nextQuery;
+      this.view.dispatch({ effects: setSearchQuery.of(nextQuery) });
+    }
+  }
+
+  keydown(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      this.commit();
+      if (event.shiftKey) {
+        findPrevious(this.view);
+      } else {
+        findNext(this.view);
+      }
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeSearchPanel(this.view);
+      this.view.focus();
+    }
+  }
+
+  update(update) {
+    for (const transaction of update.transactions) {
+      for (const effect of transaction.effects) {
+        if (effect.is(setSearchQuery) && !effect.value.eq(this.query)) {
+          this.setQuery(effect.value);
+        }
+      }
+    }
+  }
+
+  setQuery(query) {
+    this.query = query;
+    if (this.searchField.value !== query.search) {
+      this.searchField.value = query.search;
+    }
+  }
+
+  mount() {
+    this.searchField.focus();
+    this.searchField.select();
+  }
+
+  get top() {
+    return true;
+  }
+}
+
+function createFindPanel(editorView) {
+  return new P5deFindPanel(editorView);
+}
+
 function createEditor(options) {
   const mount = document.getElementById("editor");
   const code = options.code || "";
@@ -88,8 +215,14 @@ function createEditor(options) {
           highlightActiveLine(),
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
           languageExtension(language),
-          search({ top: true }),
-          keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
+          search({ top: true, createPanel: createFindPanel }),
+          keymap.of([
+            indentWithTab,
+            { key: "Mod-Shift-f", run: formatCode },
+            ...defaultKeymap,
+            ...historyKeymap,
+            ...searchKeymap,
+          ]),
           EditorView.lineWrapping,
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
@@ -140,6 +273,33 @@ function insertText(text, cursorOffset) {
   view.focus();
 }
 
+function formatCode(targetView) {
+  const editorView = targetView || view;
+  if (!editorView) return false;
+
+  forceParsing(editorView, editorView.state.doc.length, 1000);
+  const changes = indentRange(
+    editorView.state,
+    0,
+    editorView.state.doc.length,
+  );
+  const didIndent = !changes.empty;
+  if (didIndent) {
+    editorView.dispatch({
+      changes,
+      annotations: Transaction.userEvent.of("input.format"),
+    });
+  }
+
+  const didTrim = deleteTrailingWhitespace(editorView);
+  editorView.focus();
+  notifyCursor();
+  if (editorView === view && (didIndent || didTrim)) {
+    notifyCodeChanged();
+  }
+  return true;
+}
+
 function focus() {
   view?.focus();
 }
@@ -154,6 +314,12 @@ function runCommand(command) {
   }
   if (command === "find") {
     openSearchPanel(view);
+  }
+  if (command === "tab") {
+    insertTab(view);
+  }
+  if (command === "format") {
+    formatCode(view);
   }
   view.focus();
   notifyCursor();
