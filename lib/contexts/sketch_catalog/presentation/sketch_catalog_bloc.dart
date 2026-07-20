@@ -231,6 +231,19 @@ class SketchCatalogBloc extends Bloc<SketchCatalogEvent, SketchCatalogState> {
     SketchCatalogFilterChanged event,
     Emitter<SketchCatalogState> emit,
   ) async {
+    if (event.filter == state.filter) {
+      if (state.errorMessage != null) {
+        emit(state.copyWith(clearErrorMessage: true));
+      }
+      return;
+    }
+
+    final previousFilter = state.filter;
+    final canReuseCurrentCatalog =
+        state.status == SketchCatalogStatus.success &&
+        event.filter != SketchCatalogFilter.favourites &&
+        previousFilter != SketchCatalogFilter.favourites;
+
     emit(state.copyWith(filter: event.filter, clearErrorMessage: true));
     unawaited(
       _telemetry.logEvent(
@@ -238,6 +251,10 @@ class SketchCatalogBloc extends Bloc<SketchCatalogEvent, SketchCatalogState> {
         parameters: {'filter': event.filter.name},
       ),
     );
+    if (canReuseCurrentCatalog) {
+      return;
+    }
+
     await _refresh(emit, query: state.query, filter: event.filter);
   }
 
@@ -371,13 +388,13 @@ class SketchCatalogBloc extends Bloc<SketchCatalogEvent, SketchCatalogState> {
       return 'A sketch with that name already exists.';
     }
     if (error is DuplicateProjectNameException) {
-      return 'A project with that name already exists.';
+      return 'A folder with that name already exists.';
     }
     if (error is SketchNotFoundException) {
       return 'Sketch not found.';
     }
     if (error is ProjectNotFoundException) {
-      return 'Project not found.';
+      return 'Folder not found.';
     }
     return 'Unexpected error. Please try again.';
   }

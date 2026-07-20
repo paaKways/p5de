@@ -2,6 +2,7 @@ import 'package:p5de/app/di/sketch_repository_factory_native.dart'
     if (dart.library.html) 'package:p5de/app/di/sketch_repository_factory_web.dart'
     if (dart.library.js_interop) 'package:p5de/app/di/sketch_repository_factory_web.dart'
     as sketch_repository_factory;
+import 'package:p5de/app/di/shared_preferences_default_project_seed_store.dart';
 import 'package:p5de/app/di/sketch_storage_backend.dart';
 import 'package:p5de/contexts/sketch_catalog/application/create_project.dart';
 import 'package:p5de/contexts/sketch_catalog/application/create_sketch.dart';
@@ -16,6 +17,7 @@ import 'package:p5de/contexts/sketch_catalog/application/rename_project.dart';
 import 'package:p5de/contexts/sketch_catalog/application/rename_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/search_project_sketches.dart';
 import 'package:p5de/contexts/sketch_catalog/application/search_sketches.dart';
+import 'package:p5de/contexts/sketch_catalog/application/seed_default_projects.dart';
 import 'package:p5de/contexts/sketch_catalog/application/sketch_catalog_exporter.dart';
 import 'package:p5de/contexts/sketch_catalog/application/toggle_project_sketch_favorite.dart';
 import 'package:p5de/contexts/sketch_catalog/application/toggle_sketch_favorite.dart';
@@ -77,13 +79,29 @@ class AppDependencies {
 
   static Future<AppDependencies> bootstrap({
     AppTelemetry telemetry = const NoopAppTelemetry(),
-  }) {
-    return Future<AppDependencies>.value(
-      AppDependencies.forStorageBackend(
-        telemetry: telemetry,
-        storageBackend: SketchStorageBackend.filesystem,
-      ),
+  }) async {
+    const storageBackend = SketchStorageBackend.filesystem;
+    final hasExistingInstallEvidence = await sketch_repository_factory
+        .hasPersistedSketchCatalogStorage(storageBackend: storageBackend);
+    final dependencies = AppDependencies.forStorageBackend(
+      telemetry: telemetry,
+      storageBackend: storageBackend,
     );
+    try {
+      await SeedDefaultProjects(
+        createProject: dependencies.createProject,
+        projectRepository: dependencies.projectRepository,
+        sketchRepository: dependencies.sketchRepository,
+        seedStore: const SharedPreferencesDefaultProjectSeedStore(),
+      )(hasExistingInstallEvidence: hasExistingInstallEvidence);
+    } catch (error, stackTrace) {
+      await telemetry.recordError(
+        error,
+        stackTrace,
+        reason: 'default_project_seed',
+      );
+    }
+    return dependencies;
   }
 
   factory AppDependencies.forStorageBackend({

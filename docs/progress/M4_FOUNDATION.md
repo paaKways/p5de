@@ -3,13 +3,14 @@
 ## Milestone
 - Name: Milestone 4 - Hardening and Beta Readiness
 - Source: `docs/IMPLEMENTATION_PLAN.md`
-- Last updated: 2026-05-25 (M3 runtime acceptance recorded)
+- Last updated: 2026-06-18 (June local hardening, default content, catalog polish, and release APK build recorded)
 
 ## Status
 - Implementation status: Started.
 - Acceptance status: Not started.
 - Dependency: Milestone 3 Processing Java runtime acceptance is recorded; Milestone 2 editor-specific Android acceptance is still pending before formal M4 acceptance.
 - Scope note: p5.js creation and runtime execution are on hold indefinitely and must be excluded from beta-readiness criteria unless the roadmap changes.
+- June status note: first-install default content, user-facing terminology, catalog UX polish, and a Recent-filter performance fix are implemented and locally validated, but they do not close the broader M4 manual QA matrix.
 
 ## Scope Checklist
 - [ ] Performance tune against TDD budgets.
@@ -32,6 +33,15 @@
   - Crashlytics custom keys for screen, sketch, project, language, and runtime status
   - telemetry events for create, edit, save, run, stop, restart, runtime first frame, and runtime failure
   - event inventory in `docs/OBSERVABILITY.md`
+- June 2026 local progress:
+  - first-install SuaCode Africa folder/content seeding added from `assets/default_projects/suacode_africa/manifest.json`
+  - seeding is gated to first-time users only; existing users and users who delete the folder are not re-seeded automatically
+  - user-facing Project/Project template terminology changed to Folder/Content while internal APIs and historical docs may still use project/template
+  - catalog polish removed the leading "My Sketches" icon and changed sketch list row icons to a curly-brace code symbol
+  - Recent filter switching now reuses the loaded catalog when moving from All to Recent, avoiding the previously visible press-time loading path
+  - regression coverage was added for first-install seeding and Recent-filter catalog reuse
+  - debug APK was rebuilt and installed on Pixel 8 Pro `38041FDJG01HO5`
+  - local release APK was built at `build/app/outputs/flutter-apk/app-release.apk` and measured at 59.7 MB
 - No release-candidate validation or broader M4 manual QA matrix evidence is recorded yet.
 
 ## Entry Criteria
@@ -46,4 +56,4 @@
 - Decide whether p5.js editing without runtime execution remains visible in beta or is hidden behind product copy/settings.
 - Add real Firebase Android project config (`google-services.json`) and Android Gradle plugin wiring.
 - Run full validation and manual QA matrix.
-- Record final release-candidate build metadata.
+- Record signed release-candidate build metadata and distribution evidence. The June 18 release APK build is local build evidence only.
