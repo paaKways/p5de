@@ -307,7 +307,10 @@ class _SketchCatalogPageState extends State<SketchCatalogPage> {
                                         ? const Color(0xFF256AF4)
                                         : const Color(0xFF64748B),
                                   )
-                                : Icon(Icons.auto_awesome, color: color),
+                                : Icon(
+                                    Icons.data_object_outlined,
+                                    color: color,
+                                  ),
                           ),
                           title: Text(
                             sketch.name.value,
@@ -358,26 +361,10 @@ class _SketchCatalogPageState extends State<SketchCatalogPage> {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       titleSpacing: 16,
-      title: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: const Color(0xFF256AF4).withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.draw_outlined, color: Color(0xFF256AF4)),
-          ),
-          const SizedBox(width: 10),
-          const Flexible(
-            child: Text(
-              'My Sketches',
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 22),
-            ),
-          ),
-        ],
+      title: const Text(
+        'My Sketches',
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 22),
       ),
       actions: [
         if (kIsWeb && kDebugMode)
@@ -899,7 +886,7 @@ class _SketchCatalogPageState extends State<SketchCatalogPage> {
       context: context,
       builder: (dialogContext) {
         return _RenameEntityDialog(
-          title: 'Rename project',
+          title: 'Rename folder',
           currentName: currentName,
         );
       },
@@ -925,7 +912,7 @@ class _SketchCatalogPageState extends State<SketchCatalogPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Delete project'),
+          title: const Text('Delete folder'),
           content: Text(
             'Delete "$projectName" and all sketches inside it? This cannot be undone.',
           ),
@@ -1004,7 +991,7 @@ class _CatalogCreateFabState extends State<_CatalogCreateFab> {
                       key: const Key('catalog_add_project'),
                       heroTag: 'catalog_add_project_action',
                       icon: Icons.create_new_folder_outlined,
-                      label: 'New project',
+                      label: 'New folder',
                       onPressed: () => _runAction(widget.onCreateProject),
                     ),
                     const SizedBox(height: 12),
@@ -1247,7 +1234,7 @@ class _CreateProjectDialogState extends State<_CreateProjectDialog> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'New Project',
+                      'New Folder',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 20,
@@ -1256,7 +1243,7 @@ class _CreateProjectDialogState extends State<_CreateProjectDialog> {
                   ),
                   SizedBox(height: 6),
                   Text(
-                    'Create a project workspace for related sketches.',
+                    'Create a folder for related sketches.',
                     style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
                   ),
                 ],
@@ -1271,7 +1258,7 @@ class _CreateProjectDialogState extends State<_CreateProjectDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Project name',
+                      'Folder name',
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
@@ -1281,13 +1268,13 @@ class _CreateProjectDialogState extends State<_CreateProjectDialog> {
                       autofocus: true,
                       enabled: !_submitting,
                       decoration: const InputDecoration(
-                        hintText: 'Enter project name...',
+                        hintText: 'Enter folder name...',
                         border: OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Project template',
+                      'Content',
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
@@ -1319,7 +1306,7 @@ class _CreateProjectDialogState extends State<_CreateProjectDialog> {
                       LinearProgressIndicator(value: _progress?.value),
                       const SizedBox(height: 10),
                       Text(
-                        _progress?.label ?? 'Creating project...',
+                        _progress?.label ?? 'Creating folder...',
                         key: const Key('create_project_progress_label'),
                         style: const TextStyle(
                           color: Color(0xFF64748B),
@@ -1374,7 +1361,7 @@ class _CreateProjectDialogState extends State<_CreateProjectDialog> {
                               ),
                             )
                           : const Icon(Icons.arrow_forward, size: 18),
-                      label: const Text('Create Project'),
+                      label: const Text('Create Folder'),
                     ),
                   ],
                 ),
@@ -1413,7 +1400,7 @@ class _CreateProjectDialogState extends State<_CreateProjectDialog> {
       }
       setState(() {
         _submitting = false;
-        _errorMessage = 'Unable to create project.';
+        _errorMessage = 'Unable to create folder.';
       });
     }
   }
@@ -1558,7 +1545,7 @@ class _ProjectTile extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         subtitle: Text(
-          'Project - ${project.sketchCount} ${project.sketchCount == 1 ? 'sketch' : 'sketches'}',
+          'Folder - ${project.sketchCount} ${project.sketchCount == 1 ? 'sketch' : 'sketches'}',
         ),
         trailing: Wrap(
           spacing: 2,
@@ -1623,7 +1610,10 @@ class _ProjectSketchTile extends StatelessWidget {
                       ? const Color(0xFF256AF4)
                       : const Color(0xFF64748B),
                 )
-              : const Icon(Icons.code_outlined, color: Color(0xFF256AF4)),
+              : const Icon(
+                  Icons.data_object_outlined,
+                  color: Color(0xFF256AF4),
+                ),
         ),
         title: Text(
           match.sketch.name.value,

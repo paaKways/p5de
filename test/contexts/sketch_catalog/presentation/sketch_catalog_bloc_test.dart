@@ -14,6 +14,7 @@ import 'package:p5de/contexts/sketch_catalog/application/search_project_sketches
 import 'package:p5de/contexts/sketch_catalog/application/search_sketches.dart';
 import 'package:p5de/contexts/sketch_catalog/application/toggle_project_sketch_favorite.dart';
 import 'package:p5de/contexts/sketch_catalog/application/toggle_sketch_favorite.dart';
+import 'package:p5de/contexts/sketch_catalog/domain/project.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_name.dart';
@@ -399,6 +400,42 @@ void main() {
               'project sketch matches',
               isEmpty,
             ),
+      ],
+    );
+
+    blocTest<SketchCatalogBloc, SketchCatalogState>(
+      'switching from all to recent reuses the loaded catalog',
+      build: () => bloc,
+      seed: () => SketchCatalogState(
+        status: SketchCatalogStatus.success,
+        projects: [
+          Project(
+            id: 'project-1',
+            name: SketchName('Arcade'),
+            createdAt: 1,
+            updatedAt: 3,
+            sketchCount: 1,
+          ),
+        ],
+        sketches: [
+          Sketch(
+            id: 'sketch-1',
+            name: SketchName('Standalone'),
+            code: '',
+            createdAt: 1,
+            updatedAt: 2,
+          ),
+        ],
+      ),
+      act: (bloc) => bloc.add(
+        const SketchCatalogFilterChanged(SketchCatalogFilter.recent),
+      ),
+      expect: () => [
+        isA<SketchCatalogState>()
+            .having((s) => s.status, 'status', SketchCatalogStatus.success)
+            .having((s) => s.filter, 'filter', SketchCatalogFilter.recent)
+            .having((s) => s.projects.length, 'project count', 1)
+            .having((s) => s.sketches.length, 'sketch count', 1),
       ],
     );
 

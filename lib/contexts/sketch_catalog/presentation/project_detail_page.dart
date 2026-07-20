@@ -190,7 +190,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
       return Center(child: Text(_errorMessage!));
     }
     if (_sketches.isEmpty) {
-      return const Center(child: Text('No sketches in this project yet.'));
+      return const Center(child: Text('No sketches in this folder yet.'));
     }
 
     return ListView.builder(
@@ -232,7 +232,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                           ? const Color(0xFF256AF4)
                           : const Color(0xFF64748B),
                     )
-                  : const Icon(Icons.auto_awesome, color: Color(0xFF256AF4)),
+                  : const Icon(
+                      Icons.data_object_outlined,
+                      color: Color(0xFF256AF4),
+                    ),
             ),
             title: Text(
               sketch.name.value,
@@ -322,7 +325,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
       }
       setState(() {
         _loading = false;
-        _errorMessage = 'Unable to load project sketches.';
+        _errorMessage = 'Unable to load folder sketches.';
       });
     }
   }

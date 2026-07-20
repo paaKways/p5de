@@ -81,6 +81,10 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
     _postCommand('focus', const {});
   }
 
+  Future<void> setPointerEventsEnabled(bool enabled) async {
+    _iframe.style.pointerEvents = enabled ? 'auto' : 'none';
+  }
+
   void _createEditor() {
     _postCommand('createEditor', {
       'code': widget.code,

@@ -16,7 +16,7 @@ enum ProjectTemplate {
       case ProjectTemplate.empty:
         return 'Empty';
       case ProjectTemplate.suacodeAfrica:
-        return 'SuaCode Africa';
+        return 'SuaCode (Intro to Prog)';
     }
   }
 
@@ -26,6 +26,24 @@ enum ProjectTemplate {
         return null;
       case ProjectTemplate.suacodeAfrica:
         return 'assets/default_projects/suacode_africa/manifest.json';
+    }
+  }
+
+  String? get seedKey {
+    switch (this) {
+      case ProjectTemplate.empty:
+        return null;
+      case ProjectTemplate.suacodeAfrica:
+        return 'default_project_suacode_africa_v1';
+    }
+  }
+
+  String? get defaultProjectName {
+    switch (this) {
+      case ProjectTemplate.empty:
+        return null;
+      case ProjectTemplate.suacodeAfrica:
+        return 'SuaCode (Intro to Prog)';
     }
   }
 }

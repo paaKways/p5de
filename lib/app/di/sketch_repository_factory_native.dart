@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:path_provider/path_provider.dart';
 import 'package:p5de/contexts/sketch_catalog/application/sketch_catalog_exporter.dart';
 import 'package:p5de/app/di/sketch_storage_backend.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/project_repository.dart';
@@ -12,6 +15,23 @@ import 'package:p5de/contexts/sketch_catalog/infrastructure/user_visible_sketch_
 
 final _database = SketchCatalogDatabase();
 const _userVisibleSketchMirror = MethodChannelUserVisibleSketchMirror();
+
+Future<bool> hasPersistedSketchCatalogStorage({
+  required SketchStorageBackend storageBackend,
+}) async {
+  final documents = await getApplicationDocumentsDirectory();
+  final sketchRoot = Directory(
+    '${documents.path}${Platform.pathSeparator}sketches',
+  );
+  if (await sketchRoot.exists()) {
+    return true;
+  }
+
+  final databaseFile = File(
+    '${documents.path}${Platform.pathSeparator}p5de.sqlite',
+  );
+  return databaseFile.exists();
+}
 
 SketchRepository createSketchRepository({
   required SketchStorageBackend storageBackend,

@@ -33,6 +33,7 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
   InAppWebViewController? _controller;
   bool _ready = false;
   bool _initializing = false;
+  bool _pointerEventsEnabled = true;
   int _loadGeneration = 0;
 
   Future<void> setCode(String code) async {
@@ -69,6 +70,13 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
       return;
     }
     await _controller?.evaluateJavascript(source: 'window.P5deEditor.focus();');
+  }
+
+  Future<void> setPointerEventsEnabled(bool enabled) async {
+    if (_pointerEventsEnabled == enabled) {
+      return;
+    }
+    setState(() => _pointerEventsEnabled = enabled);
   }
 
   void _registerBridgeHandlers(InAppWebViewController controller) {
@@ -205,40 +213,43 @@ loadP5deEditorBundle();
 
   @override
   Widget build(BuildContext context) {
-    return InAppWebView(
-      key: const Key('editor_codemirror_webview'),
-      initialUrlRequest: URLRequest(url: _editorAssetUrl),
-      initialSettings: InAppWebViewSettings(
-        javaScriptEnabled: true,
-        transparentBackground: true,
-        supportZoom: false,
-        disableContextMenu: false,
-        allowFileAccess: false,
-        allowContentAccess: false,
-        allowFileAccessFromFileURLs: false,
-        allowUniversalAccessFromFileURLs: false,
-        webViewAssetLoader: WebViewAssetLoader(
-          pathHandlers: [AssetsPathHandler(path: '/assets/')],
+    return IgnorePointer(
+      ignoring: !_pointerEventsEnabled,
+      child: InAppWebView(
+        key: const Key('editor_codemirror_webview'),
+        initialUrlRequest: URLRequest(url: _editorAssetUrl),
+        initialSettings: InAppWebViewSettings(
+          javaScriptEnabled: true,
+          transparentBackground: true,
+          supportZoom: false,
+          disableContextMenu: false,
+          allowFileAccess: false,
+          allowContentAccess: false,
+          allowFileAccessFromFileURLs: false,
+          allowUniversalAccessFromFileURLs: false,
+          webViewAssetLoader: WebViewAssetLoader(
+            pathHandlers: [AssetsPathHandler(path: '/assets/')],
+          ),
         ),
+        onWebViewCreated: (controller) {
+          _controller = controller;
+          _registerBridgeHandlers(controller);
+          Future<void>.delayed(
+            const Duration(milliseconds: 600),
+            _initializeCodeMirror,
+          );
+        },
+        onLoadStart: (controller, url) {
+          _ready = false;
+          _loadGeneration += 1;
+        },
+        onProgressChanged: (controller, progress) {
+          if (progress == 100) {
+            _initializeCodeMirror();
+          }
+        },
+        onLoadStop: (controller, url) => _initializeCodeMirror(),
       ),
-      onWebViewCreated: (controller) {
-        _controller = controller;
-        _registerBridgeHandlers(controller);
-        Future<void>.delayed(
-          const Duration(milliseconds: 600),
-          _initializeCodeMirror,
-        );
-      },
-      onLoadStart: (controller, url) {
-        _ready = false;
-        _loadGeneration += 1;
-      },
-      onProgressChanged: (controller, progress) {
-        if (progress == 100) {
-          _initializeCodeMirror();
-        }
-      },
-      onLoadStop: (controller, url) => _initializeCodeMirror(),
     );
   }
 }

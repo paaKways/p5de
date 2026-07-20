@@ -35,9 +35,9 @@ class ProjectCreationProgress {
   String get label {
     switch (stage) {
       case ProjectCreationStage.creatingProject:
-        return 'Creating project...';
+        return 'Creating folder...';
       case ProjectCreationStage.loadingTemplate:
-        return 'Loading project template...';
+        return 'Loading content...';
       case ProjectCreationStage.preparingSketches:
         return 'Preparing $completed of $total sketches...';
       case ProjectCreationStage.syncingProject:

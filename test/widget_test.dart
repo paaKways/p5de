@@ -153,20 +153,20 @@ void main() {
       find.byKey(const Key('create_project_name_field')),
       'Arcade',
     );
-    await tester.tap(find.text('Create Project'));
+    await tester.tap(find.text('Create Folder'));
     await tester.pumpAndSettle();
 
     expect(find.text('Arcade'), findsOneWidget);
-    expect(find.text('Project - 0 sketches'), findsOneWidget);
+    expect(find.text('Folder - 0 sketches'), findsOneWidget);
 
     await tester.tap(find.text('Arcade'));
     await tester.pumpAndSettle();
 
-    expect(find.text('No sketches in this project yet.'), findsOneWidget);
+    expect(find.text('No sketches in this folder yet.'), findsOneWidget);
     expect(find.byKey(const Key('project_add_sketch_fab')), findsOneWidget);
   });
 
-  testWidgets('creates a project from the SuaCode Africa template', (
+  testWidgets('creates a folder from the SuaCode Intro to Prog content', (
     tester,
   ) async {
     final repository = _InMemorySketchRepository();
@@ -183,9 +183,9 @@ void main() {
     );
     await tester.tap(find.byKey(const Key('create_project_template_dropdown')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('SuaCode Africa').last);
+    await tester.tap(find.text('SuaCode (Intro to Prog)').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Create Project'));
+    await tester.tap(find.text('Create Folder'));
     await tester.pump();
 
     expect(
@@ -196,17 +196,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('My Africa Course'), findsOneWidget);
-    expect(find.text('Project - 28 sketches'), findsOneWidget);
+    expect(find.text('Folder - 28 sketches'), findsOneWidget);
     final project = (await projectRepository.list()).single;
     final sketches = await projectRepository.listSketches(project.id);
     expect(sketches, hasLength(28));
-    expect(sketches.first.name.value, 'Intro');
-    expect(sketches.last.name.value, 'Assignment 6');
+    expect(sketches.first.name.value, 'intro');
+    expect(sketches.last.name.value, 'Assignment6');
 
     await tester.tap(find.text('My Africa Course'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Intro'), findsOneWidget);
+    expect(find.text('intro'), findsOneWidget);
   });
 
   testWidgets('refreshes catalog after project creation dialog closes', (
@@ -226,7 +226,7 @@ void main() {
     );
 
     final listCallsBeforeCreate = projectRepository.listCallCount;
-    await tester.tap(find.text('Create Project'));
+    await tester.tap(find.text('Create Folder'));
     await tester.pump();
 
     expect(find.byKey(const Key('create_project_dialog')), findsOneWidget);
@@ -255,7 +255,7 @@ void main() {
       find.byKey(const Key('create_project_name_field')),
       'Arcade',
     );
-    await tester.tap(find.text('Create Project'));
+    await tester.tap(find.text('Create Folder'));
     await tester.pumpAndSettle();
 
     final listCallsBeforeOpen = projectRepository.listCallCount;
@@ -471,7 +471,7 @@ void main() {
     );
   });
 
-  testWidgets('renames a project list item', (tester) async {
+  testWidgets('renames a folder list item', (tester) async {
     final repository = _InMemorySketchRepository();
     final projectRepository = InMemoryProjectRepository();
     await _pumpCatalog(tester, repository, projectRepository);
@@ -484,7 +484,7 @@ void main() {
       find.byKey(const Key('create_project_name_field')),
       'Arcade',
     );
-    await tester.tap(find.text('Create Project'));
+    await tester.tap(find.text('Create Folder'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.edit_outlined));
