@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:p5de/app/di/developer_settings_store.dart';
+import 'package:p5de/contexts/runtime_preview/domain/runtime_preview_implementation.dart';
 import 'package:p5de/contexts/sketch_catalog/application/create_project.dart';
 import 'package:p5de/contexts/sketch_catalog/application/create_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/delete_project.dart';
@@ -28,8 +30,15 @@ import 'package:p5de/contexts/sketch_catalog/presentation/sketch_catalog_bloc.da
 import 'package:p5de/contexts/sketch_catalog/presentation/sketch_catalog_page.dart';
 import 'package:p5de/shared/clock.dart';
 import 'package:p5de/shared/id_generator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('renders catalog shell', (tester) async {
     final repository = _InMemorySketchRepository();
     await _pumpCatalog(tester, repository);
@@ -418,13 +427,48 @@ void main() {
     expect(find.byKey(const Key('catalog_selection_app_bar')), findsNothing);
   });
 
-  testWidgets('developer storage settings are hidden', (tester) async {
+  testWidgets('developer settings only expose runtime preview toggle', (
+    tester,
+  ) async {
     final repository = _InMemorySketchRepository();
     await _pumpCatalogWith(tester, repository);
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('catalog_developer_settings')), findsNothing);
-    expect(find.text('Developer settings'), findsNothing);
+    await tester.tap(find.byKey(const Key('catalog_debug_overflow')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('catalog_developer_settings')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('developer_settings_dialog')), findsOneWidget);
+    expect(
+      find.byKey(const Key('developer_runtime_preview_toggle')),
+      findsOneWidget,
+    );
+    expect(find.text('Storage backend'), findsNothing);
+    expect(find.text('Drift (SQLite)'), findsNothing);
+    expect(find.text('Filesystem'), findsNothing);
+  });
+
+  testWidgets('developer runtime preview toggle persists selection', (
+    tester,
+  ) async {
+    final repository = _InMemorySketchRepository();
+    await _pumpCatalogWith(tester, repository);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('catalog_debug_overflow')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('catalog_developer_settings')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('developer_runtime_preview_toggle')));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Done'));
+    await tester.pumpAndSettle();
+
+    expect(
+      await const DeveloperSettingsStore().loadRuntimePreviewImplementation(),
+      RuntimePreviewImplementation.fullscreenPhysical,
+    );
   });
 
   testWidgets('renames a project list item', (tester) async {

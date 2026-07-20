@@ -241,17 +241,48 @@
     ].join("\n");
   }
 
-  function instrumentBootstrapHtml(html, generation) {
+  function normalizeViewportConfig(raw) {
+    if (!raw || raw.mode !== "physical") {
+      return null;
+    }
+    var width = Math.max(1, Math.round(Number(raw.width) || 0));
+    var height = Math.max(1, Math.round(Number(raw.height) || 0));
+    var devicePixelRatio = Number(raw.devicePixelRatio) || 1;
+    if (!width || !height) {
+      return null;
+    }
+    return {
+      mode: "physical",
+      width: width,
+      height: height,
+      devicePixelRatio: devicePixelRatio
+    };
+  }
+
+  function createViewportConfigScript(viewportConfig) {
+    if (!viewportConfig) {
+      return "";
+    }
+    return [
+      "<script>",
+      "window.__p5deRuntimeViewport = " + JSON.stringify(viewportConfig) + ";",
+      "<\/script>"
+    ].join("\n");
+  }
+
+  function instrumentBootstrapHtml(html, generation, viewportConfig) {
     var bridgeScript = createFrameBridgeScript(generation);
     var fitStyle = createPreviewFitStyle();
+    var viewportScript = createViewportConfigScript(viewportConfig);
     if (html.indexOf("</head>") >= 0) {
-      return html.replace("</head>", fitStyle + "\n" + bridgeScript + "\n</head>");
+      return html.replace("</head>", fitStyle + "\n" + viewportScript + "\n" + bridgeScript + "\n</head>");
     }
-    return fitStyle + "\n" + bridgeScript + html;
+    return fitStyle + "\n" + viewportScript + "\n" + bridgeScript + html;
   }
 
   async function runProcessingJava(payload) {
     var code = payload && typeof payload.code === "string" ? payload.code : "";
+    var viewportConfig = normalizeViewportConfig(payload && payload.viewport);
     var generation = ++runGeneration;
     lastRunPayload = { code: code };
     post("runtimeStatusChanged", { status: "compiling" });
@@ -288,7 +319,7 @@
 
       post("runtimeStatusChanged", { status: "loading" });
       setMessage("");
-      frame.srcdoc = instrumentBootstrapHtml(bootstrapHtml, generation);
+      frame.srcdoc = instrumentBootstrapHtml(bootstrapHtml, generation, viewportConfig);
     } catch (error) {
       if (generation !== runGeneration) {
         return;

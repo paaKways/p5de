@@ -41,6 +41,7 @@ class P5deApp extends StatelessWidget {
             sketchRepository: dependencies.sketchRepository,
             projectRepository: dependencies.projectRepository,
             exporter: dependencies.sketchCatalogExporter,
+            developerSettingsStore: dependencies.developerSettingsStore,
             createProject: dependencies.createProject,
             idGenerator: dependencies.idGenerator,
             clock: dependencies.clock,

@@ -7,6 +7,8 @@ import 'package:p5de/contexts/editor/application/load_sketch_for_edit.dart';
 import 'package:p5de/contexts/editor/application/save_sketch.dart';
 import 'package:p5de/contexts/editor/presentation/codemirror_editor_view.dart';
 import 'package:p5de/contexts/editor/presentation/editor_bloc.dart';
+import 'package:p5de/contexts/runtime_preview/domain/runtime_preview_implementation.dart';
+import 'package:p5de/contexts/runtime_preview/presentation/fullscreen_runtime_preview_page.dart';
 import 'package:p5de/contexts/runtime_preview/presentation/runtime_preview_page.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
@@ -19,6 +21,7 @@ class EditorPage extends StatefulWidget {
     required this.sketchRepository,
     required this.clock,
     this.telemetry = const NoopAppTelemetry(),
+    this.runtimePreviewImplementation = RuntimePreviewImplementation.standard,
     super.key,
   });
 
@@ -26,6 +29,7 @@ class EditorPage extends StatefulWidget {
   final SketchRepository sketchRepository;
   final Clock clock;
   final AppTelemetry telemetry;
+  final RuntimePreviewImplementation runtimePreviewImplementation;
 
   @override
   State<EditorPage> createState() => _EditorPageState();
@@ -127,16 +131,45 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       ),
     );
     _requestSave();
-    await Navigator.of(context).push(
+    final runtimeError = switch (widget.runtimePreviewImplementation) {
+      RuntimePreviewImplementation.standard => await _openStandardPreview(
+        previewSketch,
+        code,
+      ),
+      RuntimePreviewImplementation.fullscreenPhysical =>
+        await _openFullscreenPhysicalPreview(previewSketch, code),
+    };
+    unawaited(widget.telemetry.setCurrentScreen('editor'));
+    if (runtimeError != null && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(runtimeError)));
+    }
+  }
+
+  Future<String?> _openStandardPreview(Sketch sketch, String code) async {
+    await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => RuntimePreviewPage(
-          sketch: previewSketch,
+          sketch: sketch,
           initialCode: code,
           telemetry: widget.telemetry,
         ),
       ),
     );
-    unawaited(widget.telemetry.setCurrentScreen('editor'));
+    return null;
+  }
+
+  Future<String?> _openFullscreenPhysicalPreview(Sketch sketch, String code) {
+    return Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
+        builder: (_) => FullscreenRuntimePreviewPage(
+          sketch: sketch,
+          initialCode: code,
+          telemetry: widget.telemetry,
+        ),
+      ),
+    );
   }
 
   void _handleEditorChanged(String code) {

@@ -2,7 +2,9 @@ import 'package:p5de/app/di/sketch_repository_factory_native.dart'
     if (dart.library.html) 'package:p5de/app/di/sketch_repository_factory_web.dart'
     if (dart.library.js_interop) 'package:p5de/app/di/sketch_repository_factory_web.dart'
     as sketch_repository_factory;
+import 'package:p5de/app/di/developer_settings_store.dart';
 import 'package:p5de/app/di/sketch_storage_backend.dart';
+import 'package:p5de/app/telemetry/app_telemetry.dart';
 import 'package:p5de/contexts/sketch_catalog/application/create_project.dart';
 import 'package:p5de/contexts/sketch_catalog/application/create_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/delete_project.dart';
@@ -21,7 +23,6 @@ import 'package:p5de/contexts/sketch_catalog/application/toggle_project_sketch_f
 import 'package:p5de/contexts/sketch_catalog/application/toggle_sketch_favorite.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/project_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
-import 'package:p5de/app/telemetry/app_telemetry.dart';
 import 'package:p5de/shared/clock.dart';
 import 'package:p5de/shared/id_generator.dart';
 
@@ -30,6 +31,7 @@ class AppDependencies {
     required this.clock,
     required this.idGenerator,
     required this.storageBackend,
+    required this.developerSettingsStore,
     required this.telemetry,
     required this.sketchRepository,
     required this.projectRepository,
@@ -54,6 +56,7 @@ class AppDependencies {
   final Clock clock;
   final IdGenerator idGenerator;
   final SketchStorageBackend storageBackend;
+  final DeveloperSettingsStore developerSettingsStore;
   final AppTelemetry telemetry;
   final SketchRepository sketchRepository;
   final ProjectRepository projectRepository;
@@ -92,6 +95,7 @@ class AppDependencies {
   }) {
     final clock = SystemClock();
     final idGenerator = UuidV4Generator();
+    const developerSettingsStore = DeveloperSettingsStore();
     final sketchRepository = sketch_repository_factory.createSketchRepository(
       storageBackend: storageBackend,
     );
@@ -108,6 +112,7 @@ class AppDependencies {
       clock: clock,
       idGenerator: idGenerator,
       storageBackend: storageBackend,
+      developerSettingsStore: developerSettingsStore,
       telemetry: telemetry,
       sketchRepository: sketchRepository,
       projectRepository: projectRepository,

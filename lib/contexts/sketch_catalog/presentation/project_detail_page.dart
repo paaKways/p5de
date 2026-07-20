@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:p5de/app/telemetry/app_telemetry.dart';
 import 'package:p5de/contexts/editor/presentation/editor_page.dart';
+import 'package:p5de/contexts/runtime_preview/domain/runtime_preview_implementation.dart';
 import 'package:p5de/contexts/sketch_catalog/application/create_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/delete_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/list_sketches.dart';
@@ -27,6 +28,7 @@ class ProjectDetailPage extends StatefulWidget {
     required this.idGenerator,
     this.initialSketchId,
     this.exporter,
+    this.runtimePreviewImplementation = RuntimePreviewImplementation.standard,
     this.telemetry = const NoopAppTelemetry(),
     super.key,
   });
@@ -37,6 +39,7 @@ class ProjectDetailPage extends StatefulWidget {
   final IdGenerator idGenerator;
   final String? initialSketchId;
   final SketchCatalogExporter? exporter;
+  final RuntimePreviewImplementation runtimePreviewImplementation;
   final AppTelemetry telemetry;
 
   @override
@@ -360,6 +363,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
           sketchRepository: _sketchRepository,
           clock: widget.clock,
           telemetry: widget.telemetry,
+          runtimePreviewImplementation: widget.runtimePreviewImplementation,
         ),
       ),
     );
