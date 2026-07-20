@@ -55,6 +55,13 @@ class FullscreenRuntimePreviewViewState
     );
   }
 
+  Future<void> showError(String message) async {
+    final encodedMessage = jsonEncode(message);
+    await _controller?.evaluateJavascript(
+      source: 'window.P5deProcessingRuntime.showError($encodedMessage);',
+    );
+  }
+
   void _registerBridgeHandlers(InAppWebViewController controller) {
     controller.addJavaScriptHandler(
       handlerName: 'runtimeReady',

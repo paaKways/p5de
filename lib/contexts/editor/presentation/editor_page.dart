@@ -158,23 +158,16 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       ),
     );
     _requestSave();
-    final runtimeError = switch (widget.runtimePreviewImplementation) {
-      RuntimePreviewImplementation.standard => await _openStandardPreview(
-        previewSketch,
-        code,
-      ),
-      RuntimePreviewImplementation.fullscreenPhysical =>
-        await _openFullscreenPhysicalPreview(previewSketch, code),
-    };
-    unawaited(widget.telemetry.setCurrentScreen('editor'));
-    if (runtimeError != null && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(runtimeError)));
+    switch (widget.runtimePreviewImplementation) {
+      case RuntimePreviewImplementation.standard:
+        await _openStandardPreview(previewSketch, code);
+      case RuntimePreviewImplementation.fullscreenPhysical:
+        await _openFullscreenPhysicalPreview(previewSketch, code);
     }
+    unawaited(widget.telemetry.setCurrentScreen('editor'));
   }
 
-  Future<String?> _openStandardPreview(Sketch sketch, String code) async {
+  Future<void> _openStandardPreview(Sketch sketch, String code) async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => RuntimePreviewPage(
@@ -184,12 +177,11 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
         ),
       ),
     );
-    return null;
   }
 
-  Future<String?> _openFullscreenPhysicalPreview(Sketch sketch, String code) {
-    return Navigator.of(context).push<String>(
-      MaterialPageRoute<String>(
+  Future<void> _openFullscreenPhysicalPreview(Sketch sketch, String code) {
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
         builder: (_) => FullscreenRuntimePreviewPage(
           sketch: sketch,
           initialCode: code,

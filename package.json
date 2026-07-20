@@ -1,7 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "bundle:editor": "esbuild tools/editor_codemirror_entry.js --bundle --format=iife --global-name=P5deEditor --outfile=assets/editor/codemirror/editor.bundle.js --minify"
+    "bundle:editor": "esbuild tools/editor_codemirror_entry.js --bundle --format=iife --global-name=P5deEditor --outfile=assets/editor/codemirror/editor.bundle.js --minify",
+    "test:runtime-assets": "node --test test/runtime/processing_runtime_assets_test.js"
   },
   "devDependencies": {
     "@codemirror/commands": "^6.8.1",

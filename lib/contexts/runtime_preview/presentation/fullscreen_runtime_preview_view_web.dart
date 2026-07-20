@@ -90,6 +90,10 @@ class FullscreenRuntimePreviewViewState
     _postCommand('stop', const {});
   }
 
+  Future<void> showError(String message) async {
+    _postCommand('showError', {'message': message});
+  }
+
   void _startRuntimeReadyHandshake() {
     _ready = false;
     _runtimeReadyAttempts = 0;

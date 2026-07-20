@@ -42,6 +42,21 @@ body {
   white-space: pre-wrap;
 }
 
+.runtime-message.is-error {
+  display: block;
+  overflow: auto;
+  padding: 32px;
+  color: #fecaca;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", monospace;
+  font-size: 16px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+  text-align: left;
+  user-select: text;
+}
+
 .runtime-message.is-hidden {
   display: none;
 }

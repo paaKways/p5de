@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:p5de/app/telemetry/app_telemetry.dart';
-import 'package:p5de/contexts/runtime_preview/domain/runtime_console_entry.dart';
 import 'package:p5de/contexts/runtime_preview/domain/runtime_physical_viewport.dart';
 import 'package:p5de/contexts/runtime_preview/presentation/fullscreen_runtime_preview_view.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch.dart';
@@ -38,7 +37,6 @@ class _FullscreenRuntimePreviewPageState
   bool _canPopAfterRuntimeStop = false;
   Timer? _runtimeWatchdogTimer;
   Stopwatch? _runStopwatch;
-  String? _lastErrorMessage;
 
   static const _runtimeWatchdogTimeout = Duration(seconds: 60);
 
@@ -93,7 +91,7 @@ class _FullscreenRuntimePreviewPageState
 
   Future<void> _runCurrentCode() async {
     if (!_supportsProcessingJava) {
-      await _closePreview(
+      await _displayRuntimeError(
         'Processing Java runtime is required for full-screen preview.',
       );
       return;
@@ -151,7 +149,7 @@ class _FullscreenRuntimePreviewPageState
           parameters: {'sketch_id': widget.sketch.id},
         ),
       );
-      unawaited(_closePreview(message));
+      unawaited(_displayRuntimeError(message));
     });
   }
 
@@ -170,9 +168,9 @@ class _FullscreenRuntimePreviewPageState
       return;
     }
     if (status == 'failure') {
-      unawaited(
-        _closePreview(_lastErrorMessage ?? 'Processing Java runtime failed.'),
-      );
+      _cancelRuntimeWatchdog();
+      _runStopwatch?.stop();
+      _runStopwatch = null;
     }
   }
 
@@ -195,12 +193,13 @@ class _FullscreenRuntimePreviewPageState
     );
   }
 
-  void _handleRuntimeError(Map<String, Object?> payload) {
+  void _handleRuntimeError(Map<String, Object?> _) {
     if (_isClosing) {
       return;
     }
-    final message = _messageFromRuntimeError(payload);
-    _lastErrorMessage = message;
+    _cancelRuntimeWatchdog();
+    _runStopwatch?.stop();
+    _runStopwatch = null;
     unawaited(widget.telemetry.setCustomKey('runtime_status', 'failure'));
     unawaited(
       widget.telemetry.logEvent(
@@ -208,48 +207,16 @@ class _FullscreenRuntimePreviewPageState
         parameters: {'sketch_id': widget.sketch.id},
       ),
     );
-    unawaited(_closePreview(message));
   }
 
-  String _messageFromRuntimeError(Map<String, Object?> payload) {
-    final diagnostics = _diagnosticsFromPayload(payload['diagnostics']);
-    if (diagnostics.isNotEmpty) {
-      return diagnostics
-          .map((diagnostic) {
-            return '${diagnostic.displayLocation} - ${diagnostic.message}';
-          })
-          .join('\n');
-    }
-
-    final message =
-        (payload['message'] as String?) ??
-        (payload['log'] as String?) ??
-        'Processing Java runtime error.';
-    return _stripPhaseLog(message).trim().isEmpty
-        ? 'Processing Java runtime error.'
-        : _stripPhaseLog(message);
+  Future<void> _displayRuntimeError(String message) async {
+    _cancelRuntimeWatchdog();
+    _runStopwatch?.stop();
+    _runStopwatch = null;
+    await _runtimeKey.currentState?.showError(message);
   }
 
-  List<RuntimeDiagnostic> _diagnosticsFromPayload(Object? raw) {
-    if (raw is! List) {
-      return const [];
-    }
-    return raw
-        .whereType<Map>()
-        .map((item) => RuntimeDiagnostic.fromPayload(item.cast()))
-        .toList(growable: false);
-  }
-
-  String _stripPhaseLog(String message) {
-    return message
-        .replaceAll(
-          RegExp(r'(^|\n)Phase log:\n(?:- .*(?:\n|$))+', multiLine: true),
-          '\n',
-        )
-        .trim();
-  }
-
-  Future<void> _closePreview([String? result]) async {
+  Future<void> _closePreview() async {
     if (_isClosing) {
       return;
     }
@@ -270,14 +237,14 @@ class _FullscreenRuntimePreviewPageState
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        Navigator.of(context).pop(result);
+        Navigator.of(context).pop();
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return PopScope<String?>(
+    return PopScope<void>(
       canPop: _canPopAfterRuntimeStop,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {

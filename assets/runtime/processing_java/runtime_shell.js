@@ -9,6 +9,8 @@
 
   var frame = document.getElementById("runtimeFrame");
   var message = document.getElementById("runtimeMessage");
+  var stage = document.getElementById("runtimeStage");
+  var activeViewportConfig = null;
 
   function normalizePayload(raw) {
     if (!raw) {
@@ -44,27 +46,11 @@
     }
   }
 
-  function setMessage(text) {
+  function setMessage(text, presentation) {
     message.textContent = text || "";
+    message.classList.toggle("is-error", presentation === "error");
     message.classList.toggle("is-hidden", !text);
     frame.classList.toggle("is-hidden", !!text);
-  }
-
-  function showBlankPreviewFrame() {
-    frame.srcdoc = [
-      "<!doctype html>",
-      "<html lang=\"en\">",
-      "<head>",
-      "  <meta charset=\"utf-8\">",
-      "  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">",
-      "  <style>",
-      "    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #0f172a; }",
-      "  </style>",
-      "</head>",
-      "<body></body>",
-      "</html>"
-    ].join("\n");
-    setMessage("");
   }
 
   function mapDiagnostic(diagnostic) {
@@ -91,9 +77,44 @@
       var location = diagnostic.fileName || "Sketch.pde";
       if (diagnostic.lineNumber) {
         location += ":" + diagnostic.lineNumber;
+        if (diagnostic.columnNumber) {
+          location += ":" + diagnostic.columnNumber;
+        }
       }
       return location + " - " + (diagnostic.message || "Compiler diagnostic");
     }).join("\n");
+  }
+
+  function runtimeErrorText(payload) {
+    var errorPayload = payload || {};
+    var diagnosticsText = summarizeDiagnostics(
+      Array.isArray(errorPayload.diagnostics) ? errorPayload.diagnostics : []
+    );
+    if (diagnosticsText) {
+      return diagnosticsText;
+    }
+
+    var messageText = String(errorPayload.message || "").trim();
+    var stackText = stripPhaseLog(errorPayload.stack);
+    if (stackText) {
+      return stackText;
+    }
+
+    var logText = stripPhaseLog(errorPayload.log);
+    if (logText) {
+      if (!messageText || messageText === "Processing Java compile error.") {
+        return logText;
+      }
+      return logText.indexOf(messageText) >= 0
+        ? logText
+        : messageText + "\n\n" + logText;
+    }
+
+    return messageText || "Processing Java runtime error.";
+  }
+
+  function showRuntimeError(payload) {
+    setMessage(runtimeErrorText(payload), "error");
   }
 
   function logResult(result) {
@@ -245,46 +266,79 @@
     if (!raw || raw.mode !== "physical") {
       return null;
     }
-    var width = Math.max(1, Math.round(Number(raw.width) || 0));
-    var height = Math.max(1, Math.round(Number(raw.height) || 0));
-    var devicePixelRatio = Number(raw.devicePixelRatio) || 1;
-    if (!width || !height) {
+    var rawWidth = Number(raw.width);
+    var rawHeight = Number(raw.height);
+    var rawDevicePixelRatio = Number(raw.devicePixelRatio);
+    if (!Number.isFinite(rawWidth) || rawWidth <= 0 ||
+        !Number.isFinite(rawHeight) || rawHeight <= 0) {
       return null;
     }
     return {
       mode: "physical",
-      width: width,
-      height: height,
-      devicePixelRatio: devicePixelRatio
+      width: Math.max(1, Math.round(rawWidth)),
+      height: Math.max(1, Math.round(rawHeight)),
+      devicePixelRatio: Number.isFinite(rawDevicePixelRatio) && rawDevicePixelRatio > 0
+        ? rawDevicePixelRatio
+        : 1
     };
   }
 
-  function createViewportConfigScript(viewportConfig) {
-    if (!viewportConfig) {
-      return "";
+  function updatePhysicalFrameTransform() {
+    if (!activeViewportConfig) {
+      return;
     }
-    return [
-      "<script>",
-      "window.__p5deRuntimeViewport = " + JSON.stringify(viewportConfig) + ";",
-      "<\/script>"
-    ].join("\n");
+    var stageWidth = Math.max(1, stage.clientWidth);
+    var stageHeight = Math.max(1, stage.clientHeight);
+    frame.style.transform = "scale(" +
+      (stageWidth / activeViewportConfig.width) + "," +
+      (stageHeight / activeViewportConfig.height) + ")";
   }
 
-  function instrumentBootstrapHtml(html, generation, viewportConfig) {
+  function configurePreviewFrame(viewportConfig) {
+    activeViewportConfig = viewportConfig;
+    frame.style.removeProperty("inset");
+    frame.style.removeProperty("right");
+    frame.style.removeProperty("bottom");
+    frame.style.removeProperty("transform");
+    frame.style.removeProperty("transform-origin");
+
+    if (!viewportConfig) {
+      frame.style.left = "0";
+      frame.style.top = "0";
+      frame.style.width = "100%";
+      frame.style.height = "100%";
+      return;
+    }
+
+    // Give the child browsing context a physical-pixel-sized CSS viewport.
+    // Scaling the iframe back to the visible stage keeps one sketch pixel
+    // aligned with one device pixel without adding JS interop to PApplet.
+    frame.style.left = "0";
+    frame.style.top = "0";
+    frame.style.right = "auto";
+    frame.style.bottom = "auto";
+    frame.style.width = viewportConfig.width + "px";
+    frame.style.height = viewportConfig.height + "px";
+    frame.style.transformOrigin = "0 0";
+    updatePhysicalFrameTransform();
+  }
+
+  function instrumentBootstrapHtml(html, generation) {
     var bridgeScript = createFrameBridgeScript(generation);
     var fitStyle = createPreviewFitStyle();
-    var viewportScript = createViewportConfigScript(viewportConfig);
     if (html.indexOf("</head>") >= 0) {
-      return html.replace("</head>", fitStyle + "\n" + viewportScript + "\n" + bridgeScript + "\n</head>");
+      return html.replace("</head>", fitStyle + "\n" + bridgeScript + "\n</head>");
     }
-    return fitStyle + "\n" + viewportScript + "\n" + bridgeScript + html;
+    return fitStyle + "\n" + bridgeScript + html;
   }
 
   async function runProcessingJava(payload) {
     var code = payload && typeof payload.code === "string" ? payload.code : "";
     var viewportConfig = normalizeViewportConfig(payload && payload.viewport);
     var generation = ++runGeneration;
-    lastRunPayload = { code: code };
+    lastRunPayload = viewportConfig
+      ? { code: code, viewport: viewportConfig }
+      : { code: code };
     post("runtimeStatusChanged", { status: "compiling" });
     setMessage("Compiling Processing Java sketch...");
 
@@ -302,12 +356,13 @@
 
       if (!result || result.status !== "compiled") {
         var diagnostics = mappedDiagnostics(result);
-        showBlankPreviewFrame();
-        post("runtimeError", {
+        var compileError = {
           message: diagnostics.length ? diagnostics[0].message : "Processing Java compile error.",
           diagnostics: diagnostics,
           log: result && result.log ? result.log : null
-        });
+        };
+        showRuntimeError(compileError);
+        post("runtimeError", compileError);
         post("runtimeStatusChanged", { status: "failure" });
         return;
       }
@@ -319,20 +374,26 @@
 
       post("runtimeStatusChanged", { status: "loading" });
       setMessage("");
-      frame.srcdoc = instrumentBootstrapHtml(bootstrapHtml, generation, viewportConfig);
+      configurePreviewFrame(viewportConfig);
+      frame.srcdoc = instrumentBootstrapHtml(bootstrapHtml, generation);
     } catch (error) {
       if (generation !== runGeneration) {
         return;
       }
       var messageText = error && error.stack ? error.stack : String(error);
-      showBlankPreviewFrame();
-      post("runtimeError", { message: error && error.message ? error.message : String(error), stack: messageText });
+      var runtimeError = {
+        message: error && error.message ? error.message : String(error),
+        stack: messageText
+      };
+      showRuntimeError(runtimeError);
+      post("runtimeError", runtimeError);
       post("runtimeStatusChanged", { status: "failure" });
     }
   }
 
   function stopRuntime() {
     runGeneration += 1;
+    configurePreviewFrame(null);
     frame.removeAttribute("srcdoc");
     frame.src = "about:blank";
     setMessage("Runtime stopped");
@@ -364,6 +425,7 @@
 
     post(data.name, payload);
     if (data.name === "runtimeError") {
+      showRuntimeError(payload);
       post("runtimeStatusChanged", { status: "failure" });
     }
   }
@@ -387,15 +449,21 @@
       stopRuntime();
     } else if (data.command === "restart") {
       restartRuntime();
+    } else if (data.command === "showError") {
+      showRuntimeError(payload);
     }
   }
 
   window.addEventListener("message", handleHostMessage);
+  window.addEventListener("resize", updatePhysicalFrameTransform);
 
   window.P5deProcessingRuntime = {
     runProcessingJava: runProcessingJava,
     stop: stopRuntime,
-    restart: restartRuntime
+    restart: restartRuntime,
+    showError: function (text) {
+      showRuntimeError({ message: text });
+    }
   };
 
   function signalReady() {
