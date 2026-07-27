@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:p5de/contexts/editor/application/load_sketch_for_edit.dart';
@@ -118,6 +120,45 @@ void main() {
         ),
       ],
     );
+
+    test(
+      'preserves edits made while saving and saves the newest code',
+      () async {
+        repository.seed(_sketch());
+        final firstSaveBarrier = Completer<void>();
+        repository.nextUpdateBarrier = firstSaveBarrier;
+        final bloc = buildBloc();
+        addTearDown(bloc.close);
+
+        bloc.add(const EditorLoaded('sketch-1'));
+        await bloc.stream.firstWhere(
+          (state) => state.status == EditorStatus.ready && state.draft != null,
+        );
+
+        bloc.add(const EditorCodeChanged('first edit'));
+        await bloc.stream.firstWhere(
+          (state) => state.draft?.currentCode == 'first edit',
+        );
+        bloc.add(const EditorSaveRequested());
+        await bloc.stream.firstWhere((state) => state.isSaving);
+
+        bloc.add(const EditorCodeChanged('newer edit'));
+        await bloc.stream.firstWhere(
+          (state) => state.isSaving && state.draft?.currentCode == 'newer edit',
+        );
+
+        firstSaveBarrier.complete();
+        await bloc.stream.firstWhere(
+          (state) =>
+              !state.isSaving &&
+              !state.isDirty &&
+              state.savedSketch?.code == 'newer edit',
+        );
+
+        expect(repository.updatedCodes, ['first edit', 'newer edit']);
+        expect((await repository.findById('sketch-1'))?.code, 'newer edit');
+      },
+    );
   });
 }
 
@@ -134,6 +175,8 @@ Sketch _sketch() {
 
 class _InMemorySketchRepository implements SketchRepository {
   final List<Sketch> _items = [];
+  final List<String> updatedCodes = [];
+  Completer<void>? nextUpdateBarrier;
 
   void seed(Sketch sketch) {
     _items.add(sketch);
@@ -174,6 +217,12 @@ class _InMemorySketchRepository implements SketchRepository {
 
   @override
   Future<void> update(Sketch sketch) async {
+    updatedCodes.add(sketch.code);
+    final barrier = nextUpdateBarrier;
+    nextUpdateBarrier = null;
+    if (barrier != null) {
+      await barrier.future;
+    }
     final index = _items.indexWhere((item) => item.id == sketch.id);
     if (index < 0) {
       throw SketchNotFoundException();

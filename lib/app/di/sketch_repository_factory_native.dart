@@ -9,12 +9,20 @@ import 'package:p5de/contexts/sketch_catalog/infrastructure/drift_project_reposi
 import 'package:p5de/contexts/sketch_catalog/infrastructure/drift_sketch_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/filesystem_project_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/filesystem_sketch_repository.dart';
+import 'package:p5de/contexts/sketch_catalog/infrastructure/saf_catalog_store.dart';
+import 'package:p5de/contexts/sketch_catalog/infrastructure/saf_project_repository.dart';
+import 'package:p5de/contexts/sketch_catalog/infrastructure/saf_sketch_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/sketch_catalog_database.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/user_visible_sketch_catalog_exporter.dart';
 import 'package:p5de/contexts/sketch_catalog/infrastructure/user_visible_sketch_mirror.dart';
 
 final _database = SketchCatalogDatabase();
-const _userVisibleSketchMirror = MethodChannelUserVisibleSketchMirror();
+final _safCatalogStore = SafCatalogStore();
+final _userVisibleSketchMirror = CoalescingUserVisibleSketchMirror(
+  const MethodChannelUserVisibleSketchMirror(),
+);
+
+SketchStorageBackend defaultSketchStorageBackend() => SketchStorageBackend.saf;
 
 Future<bool> hasPersistedSketchCatalogStorage({
   required SketchStorageBackend storageBackend,
@@ -46,6 +54,8 @@ SketchRepository createSketchRepository({
       return FilesystemSketchRepository(
         userVisibleMirror: _userVisibleSketchMirror,
       );
+    case SketchStorageBackend.saf:
+      return SafSketchRepository(_safCatalogStore);
   }
 }
 
@@ -62,6 +72,8 @@ ProjectRepository createProjectRepository({
       return FilesystemProjectRepository(
         userVisibleMirror: _userVisibleSketchMirror,
       );
+    case SketchStorageBackend.saf:
+      return SafProjectRepository(_safCatalogStore);
   }
 }
 
@@ -69,6 +81,9 @@ SketchCatalogExporter? createSketchCatalogExporter({
   required SketchRepository sketchRepository,
   required ProjectRepository projectRepository,
 }) {
+  if (sketchRepository is SafSketchRepository) {
+    return null;
+  }
   return UserVisibleSketchCatalogExporter(
     sketchRepository: sketchRepository,
     projectRepository: projectRepository,

@@ -28,7 +28,7 @@ class ProjectDetailPage extends StatefulWidget {
     required this.idGenerator,
     this.initialSketchId,
     this.exporter,
-    this.runtimePreviewImplementation = RuntimePreviewImplementation.standard,
+    this.runtimePreviewImplementation = defaultRuntimePreviewImplementation,
     this.telemetry = const NoopAppTelemetry(),
     super.key,
   });

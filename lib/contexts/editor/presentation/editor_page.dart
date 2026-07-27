@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
+import 'package:p5de/app/app_theme.dart';
 import 'package:p5de/app/telemetry/app_telemetry.dart';
+import 'package:p5de/contexts/editor/application/editor_autosave_debouncer.dart';
 import 'package:p5de/contexts/editor/application/load_sketch_for_edit.dart';
 import 'package:p5de/contexts/editor/application/save_sketch.dart';
+import 'package:p5de/contexts/editor/infrastructure/editor_settings_store.dart';
 import 'package:p5de/contexts/editor/presentation/codemirror_editor_view.dart';
 import 'package:p5de/contexts/editor/presentation/editor_bloc.dart';
 import 'package:p5de/contexts/runtime_preview/domain/runtime_preview_implementation.dart';
@@ -22,7 +25,8 @@ class EditorPage extends StatefulWidget {
     required this.sketchRepository,
     required this.clock,
     this.telemetry = const NoopAppTelemetry(),
-    this.runtimePreviewImplementation = RuntimePreviewImplementation.standard,
+    this.runtimePreviewImplementation = defaultRuntimePreviewImplementation,
+    this.settingsStore = const EditorSettingsStore(),
     super.key,
   });
 
@@ -31,6 +35,7 @@ class EditorPage extends StatefulWidget {
   final Clock clock;
   final AppTelemetry telemetry;
   final RuntimePreviewImplementation runtimePreviewImplementation;
+  final EditorSettingsStore settingsStore;
 
   @override
   State<EditorPage> createState() => _EditorPageState();
@@ -38,12 +43,13 @@ class EditorPage extends StatefulWidget {
 
 class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   late final EditorBloc _bloc;
+  late final EditorAutosaveDebouncer _autosaveDebouncer;
   final GlobalKey<CodeMirrorEditorViewState> _editorKey =
       GlobalKey<CodeMirrorEditorViewState>();
   late Sketch _sketch;
-  Timer? _autosaveTimer;
   int _line = 1;
   int _column = 1;
+  int _editorFontSize = EditorSettingsStore.defaultFontSize;
   bool _hasLoggedEditThisSession = false;
 
   bool get _runtimeAvailable =>
@@ -61,6 +67,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       ),
       telemetry: widget.telemetry,
     )..add(EditorLoaded(_sketch.id));
+    _autosaveDebouncer = EditorAutosaveDebouncer(onSave: _requestSave);
     unawaited(widget.telemetry.setCurrentScreen('editor'));
     unawaited(widget.telemetry.setCustomKey('current_sketch_id', _sketch.id));
     unawaited(
@@ -70,12 +77,13 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       ),
     );
     WidgetsBinding.instance.addObserver(this);
+    unawaited(_loadEditorSettings());
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _autosaveTimer?.cancel();
+    _autosaveDebouncer.dispose();
     _bloc.close();
     super.dispose();
   }
@@ -90,10 +98,18 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   }
 
   void _requestSave() {
-    _autosaveTimer?.cancel();
+    _autosaveDebouncer.cancel();
     if (_bloc.state.isDirty && !_bloc.state.isSaving) {
       _bloc.add(const EditorSaveRequested());
     }
+  }
+
+  Future<void> _loadEditorSettings() async {
+    final fontSize = await widget.settingsStore.loadFontSize();
+    if (!mounted || fontSize == _editorFontSize) {
+      return;
+    }
+    setState(() => _editorFontSize = fontSize);
   }
 
   Future<void> _insertTextAtSelection(String value) async {
@@ -118,6 +134,32 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     await _showDialogAboveEditor<void>(
       builder: (_) => const _ColorPickerDialog(),
     );
+  }
+
+  Future<void> _openEditorSettings() async {
+    await _editorKey.currentState?.setPointerEventsEnabled(false);
+    try {
+      if (!mounted) {
+        return;
+      }
+      await showModalBottomSheet<void>(
+        context: context,
+        useSafeArea: true,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (sheetContext) => _EditorSettingsSheet(
+          initialFontSize: _editorFontSize,
+          onFontSizeChanged: (fontSize) {
+            if (mounted && fontSize != _editorFontSize) {
+              setState(() => _editorFontSize = fontSize);
+            }
+          },
+        ),
+      );
+    } finally {
+      await _editorKey.currentState?.setPointerEventsEnabled(true);
+      unawaited(widget.settingsStore.saveFontSize(_editorFontSize));
+    }
   }
 
   void _handleEditorReady() {}
@@ -205,8 +247,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       );
     }
     _bloc.add(EditorCodeChanged(code));
-    _autosaveTimer?.cancel();
-    _autosaveTimer = Timer(const Duration(seconds: 1), _requestSave);
+    _autosaveDebouncer.schedule();
   }
 
   void _handleCursorChanged(int line, int column) {
@@ -222,10 +263,13 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return BlocConsumer<EditorBloc, EditorState>(
       bloc: _bloc,
+      buildWhen: (previous, current) =>
+          previous.status != current.status ||
+          previous.isDirty != current.isDirty ||
+          (previous.draft == null) != (current.draft == null),
       listenWhen: (previous, current) =>
           previous.savedSketch != current.savedSketch ||
-          previous.errorMessage != current.errorMessage ||
-          previous.draft != current.draft,
+          previous.errorMessage != current.errorMessage,
       listener: (context, state) {
         final savedSketch = state.savedSketch;
         if (savedSketch != null && savedSketch != _sketch) {
@@ -329,6 +373,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                     key: _editorKey,
                     code: _sketch.code,
                     language: _sketch.language.storageValue,
+                    fontSize: _editorFontSize,
                     onChanged: _handleEditorChanged,
                     onCursorChanged: _handleCursorChanged,
                     onReady: _handleEditorReady,
@@ -341,6 +386,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                   onFind: () => _runEditorCommand('find'),
                   onFormat: () => _runEditorCommand('format'),
                   onColor: _openColorPicker,
+                  onSettings: _openEditorSettings,
                 ),
               ],
             ),
@@ -508,21 +554,21 @@ class _EditorKeyboardToolbar extends StatelessWidget {
   final ValueChanged<String> onInsert;
 
   static const _shortcuts = [
+    _EditorShortcut(label: ';', value: ';'),
+    _EditorShortcut(label: '(', value: '('),
+    _EditorShortcut(label: ')', value: ')'),
+    _EditorShortcut(label: '{', value: '{'),
+    _EditorShortcut(label: '}', value: '}'),
+    _EditorShortcut(label: '[', value: '['),
+    _EditorShortcut(label: ']', value: ']'),
+    _EditorShortcut(label: '=', value: '='),
+    _EditorShortcut(label: '+', value: '+'),
     _EditorShortcut(
       label: 'Tab',
       value: '\t',
       width: 104,
       icon: Icons.keyboard_tab,
     ),
-    _EditorShortcut(label: '{', value: '{'),
-    _EditorShortcut(label: '}', value: '}'),
-    _EditorShortcut(label: '(', value: '('),
-    _EditorShortcut(label: ')', value: ')'),
-    _EditorShortcut(label: '[', value: '['),
-    _EditorShortcut(label: ']', value: ']'),
-    _EditorShortcut(label: '=', value: '='),
-    _EditorShortcut(label: '+', value: '+'),
-    _EditorShortcut(label: ';', value: ';'),
   ];
 
   @override
@@ -621,6 +667,7 @@ class _EditorBottomActions extends StatelessWidget {
     required this.onFind,
     required this.onFormat,
     required this.onColor,
+    required this.onSettings,
   });
 
   final int line;
@@ -628,6 +675,7 @@ class _EditorBottomActions extends StatelessWidget {
   final VoidCallback onFind;
   final VoidCallback onFormat;
   final VoidCallback onColor;
+  final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -637,29 +685,11 @@ class _EditorBottomActions extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _EditorActionButton(
-                    icon: Icons.search,
-                    label: 'Find',
-                    onTap: onFind,
-                  ),
-                  const SizedBox(width: 16),
-                  _EditorActionButton(
-                    icon: Icons.format_align_left,
-                    label: 'Auto-Format',
-                    onTap: onFormat,
-                  ),
-                  const SizedBox(width: 16),
-                  _EditorActionButton(
-                    icon: Icons.palette_outlined,
-                    label: 'Color',
-                    onTap: onColor,
-                  ),
-                ],
-              ),
+            child: _ScrollableEditorActions(
+              onFind: onFind,
+              onFormat: onFormat,
+              onColor: onColor,
+              onSettings: onSettings,
             ),
           ),
           const SizedBox(width: 16),
@@ -668,10 +698,177 @@ class _EditorBottomActions extends StatelessWidget {
             style: const TextStyle(
               color: Color(0xFF94A3B8),
               fontFamily: 'monospace',
+              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ScrollableEditorActions extends StatefulWidget {
+  const _ScrollableEditorActions({
+    required this.onFind,
+    required this.onFormat,
+    required this.onColor,
+    required this.onSettings,
+  });
+
+  final VoidCallback onFind;
+  final VoidCallback onFormat;
+  final VoidCallback onColor;
+  final VoidCallback onSettings;
+
+  @override
+  State<_ScrollableEditorActions> createState() =>
+      _ScrollableEditorActionsState();
+}
+
+class _ScrollableEditorActionsState extends State<_ScrollableEditorActions> {
+  final ScrollController _scrollController = ScrollController();
+  bool _showLeftCue = false;
+  bool _showRightCue = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_updateScrollCues);
+    _scheduleScrollCueUpdate();
+  }
+
+  @override
+  void didUpdateWidget(_ScrollableEditorActions oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _scheduleScrollCueUpdate();
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_updateScrollCues)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _scheduleScrollCueUpdate() {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateScrollCues());
+  }
+
+  void _updateScrollCues() {
+    if (!mounted || !_scrollController.hasClients) {
+      return;
+    }
+    final position = _scrollController.position;
+    final showLeft = position.pixels > position.minScrollExtent + 1;
+    final showRight = position.pixels < position.maxScrollExtent - 1;
+    if (showLeft == _showLeftCue && showRight == _showRightCue) {
+      return;
+    }
+    setState(() {
+      _showLeftCue = showLeft;
+      _showRightCue = showRight;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _scheduleScrollCueUpdate();
+    return SizedBox(
+      height: 44,
+      child: Stack(
+        children: [
+          SingleChildScrollView(
+            key: const Key('editor_bottom_actions_scroll'),
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            child: Center(
+              child: Row(
+                children: [
+                  _EditorActionButton(
+                    icon: Icons.search,
+                    label: 'Find',
+                    onTap: widget.onFind,
+                  ),
+                  const SizedBox(width: 16),
+                  _EditorActionButton(
+                    icon: Icons.format_align_left,
+                    label: 'Auto-Format',
+                    onTap: widget.onFormat,
+                  ),
+                  const SizedBox(width: 16),
+                  _EditorActionButton(
+                    icon: Icons.palette_outlined,
+                    label: 'Color',
+                    onTap: widget.onColor,
+                  ),
+                  const SizedBox(width: 16),
+                  _EditorActionButton(
+                    icon: Icons.text_fields,
+                    label: 'Text size',
+                    onTap: widget.onSettings,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_showLeftCue)
+            const Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: _HorizontalScrollCue(direction: AxisDirection.left),
+            ),
+          if (_showRightCue)
+            const Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: _HorizontalScrollCue(direction: AxisDirection.right),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HorizontalScrollCue extends StatelessWidget {
+  const _HorizontalScrollCue({required this.direction});
+
+  final AxisDirection direction;
+
+  @override
+  Widget build(BuildContext context) {
+    final pointsRight = direction == AxisDirection.right;
+    return IgnorePointer(
+      child: ExcludeSemantics(
+        child: Container(
+          key: Key(
+            pointsRight ? 'editor_scroll_cue_right' : 'editor_scroll_cue_left',
+          ),
+          width: 30,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: pointsRight ? Alignment.centerLeft : Alignment.centerRight,
+              end: pointsRight ? Alignment.centerRight : Alignment.centerLeft,
+              colors: const [Colors.transparent, Colors.white],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF334155).withValues(alpha: 0.09),
+                blurRadius: 6,
+                offset: Offset(pointsRight ? -2 : 2, 0),
+              ),
+            ],
+          ),
+          alignment: pointsRight ? Alignment.centerRight : Alignment.centerLeft,
+          child: Icon(
+            pointsRight ? Icons.chevron_right : Icons.chevron_left,
+            size: 18,
+            color: const Color(0xFF64748B),
+          ),
+        ),
       ),
     );
   }
@@ -705,11 +902,179 @@ class _EditorActionButton extends StatelessWidget {
                 label,
                 style: const TextStyle(
                   color: Color(0xFF64748B),
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EditorSettingsSheet extends StatefulWidget {
+  const _EditorSettingsSheet({
+    required this.initialFontSize,
+    required this.onFontSizeChanged,
+  });
+
+  final int initialFontSize;
+  final ValueChanged<int> onFontSizeChanged;
+
+  @override
+  State<_EditorSettingsSheet> createState() => _EditorSettingsSheetState();
+}
+
+class _EditorSettingsSheetState extends State<_EditorSettingsSheet> {
+  late int _fontSize;
+
+  @override
+  void initState() {
+    super.initState();
+    _fontSize = widget.initialFontSize;
+  }
+
+  void _setFontSize(int value) {
+    final fontSize = value.clamp(
+      EditorSettingsStore.minimumFontSize,
+      EditorSettingsStore.maximumFontSize,
+    );
+    if (fontSize == _fontSize) {
+      return;
+    }
+    setState(() => _fontSize = fontSize);
+    widget.onFontSizeChanged(fontSize);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      top: false,
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: const Icon(
+                        Icons.text_fields_rounded,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Editor settings',
+                      style: theme.textTheme.titleLarge?.copyWith(fontSize: 20),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  'Code text size',
+                  style: theme.textTheme.titleMedium?.copyWith(fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Adjust how large code appears in the editor.',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceMuted,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton.filledTonal(
+                          key: const Key('editor_font_size_decrease'),
+                          tooltip: 'Decrease code text size',
+                          onPressed:
+                              _fontSize > EditorSettingsStore.minimumFontSize
+                              ? () => _setFontSize(_fontSize - 1)
+                              : null,
+                          icon: const Icon(Icons.remove),
+                        ),
+                        Expanded(
+                          child: Slider(
+                            key: const Key('editor_font_size_slider'),
+                            value: _fontSize.toDouble(),
+                            min: EditorSettingsStore.minimumFontSize.toDouble(),
+                            max: EditorSettingsStore.maximumFontSize.toDouble(),
+                            divisions:
+                                EditorSettingsStore.maximumFontSize -
+                                EditorSettingsStore.minimumFontSize,
+                            label: '$_fontSize px',
+                            onChanged: (value) => _setFontSize(value.round()),
+                          ),
+                        ),
+                        IconButton.filledTonal(
+                          key: const Key('editor_font_size_increase'),
+                          tooltip: 'Increase code text size',
+                          onPressed:
+                              _fontSize < EditorSettingsStore.maximumFontSize
+                              ? () => _setFontSize(_fontSize + 1)
+                              : null,
+                          icon: const Icon(Icons.add),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 58,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 9,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Text(
+                            '$_fontSize px',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppColors.text,
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

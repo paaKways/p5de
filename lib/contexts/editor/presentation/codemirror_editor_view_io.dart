@@ -7,6 +7,7 @@ class CodeMirrorEditorView extends StatefulWidget {
   const CodeMirrorEditorView({
     required this.code,
     required this.language,
+    required this.fontSize,
     required this.onChanged,
     required this.onCursorChanged,
     required this.onReady,
@@ -15,6 +16,7 @@ class CodeMirrorEditorView extends StatefulWidget {
 
   final String code;
   final String language;
+  final int fontSize;
   final ValueChanged<String> onChanged;
   final void Function(int line, int column) onCursorChanged;
   final VoidCallback onReady;
@@ -70,6 +72,15 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
       return;
     }
     await _controller?.evaluateJavascript(source: 'window.P5deEditor.focus();');
+  }
+
+  Future<void> setFontSize(int fontSize) async {
+    if (!_ready) {
+      return;
+    }
+    await _controller?.evaluateJavascript(
+      source: 'window.P5deEditor.setFontSize($fontSize);',
+    );
   }
 
   Future<void> setPointerEventsEnabled(bool enabled) async {
@@ -136,6 +147,7 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
     final options = jsonEncode({
       'code': widget.code,
       'language': widget.language,
+      'fontSize': widget.fontSize,
     });
     final bundleUrl = jsonEncode(_editorBundleAssetUrlText);
     try {
@@ -209,6 +221,14 @@ async function loadP5deEditorBundle() {
 loadP5deEditorBundle();
 ''',
     );
+  }
+
+  @override
+  void didUpdateWidget(CodeMirrorEditorView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.fontSize != widget.fontSize) {
+      setFontSize(widget.fontSize);
+    }
   }
 
   @override

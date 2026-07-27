@@ -6,6 +6,9 @@ import 'package:p5de/contexts/sketch_catalog/infrastructure/web_local_storage_pr
 import 'package:p5de/contexts/sketch_catalog/infrastructure/web_local_storage_sketch_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+SketchStorageBackend defaultSketchStorageBackend() =>
+    SketchStorageBackend.filesystem;
+
 Future<bool> hasPersistedSketchCatalogStorage({
   required SketchStorageBackend storageBackend,
 }) async {

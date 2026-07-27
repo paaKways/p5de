@@ -7,7 +7,11 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: SuaCodeSplashScreen()));
 
     expect(find.text('SuaCode IDE'), findsOneWidget);
-    expect(find.byType(Image), findsNWidgets(2));
+    expect(find.byType(Image), findsOneWidget);
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+      const Color(0xFFF7FBF6),
+    );
   });
 
   testWidgets('transitions from splash to app content', (tester) async {

@@ -71,7 +71,6 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
 
     emit(
       state.copyWith(
-        status: EditorStatus.ready,
         draft: draft.copyWith(currentCode: event.code),
         clearSavedSketch: true,
         clearErrorMessage: true,
@@ -103,9 +102,9 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
           },
         ),
       );
-      final savedDraft = draft.copyWith(
+      final latestDraft = state.draft ?? draft;
+      final savedDraft = latestDraft.copyWith(
         savedCode: savedSketch.code,
-        currentCode: savedSketch.code,
         updatedAt: savedSketch.updatedAt,
       );
       emit(
@@ -115,6 +114,9 @@ class EditorBloc extends Bloc<EditorEvent, EditorState> {
           savedSketch: savedSketch,
         ),
       );
+      if (savedDraft.isDirty) {
+        add(const EditorSaveRequested());
+      }
     } catch (error, stackTrace) {
       unawaited(
         _telemetry.recordError(

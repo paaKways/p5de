@@ -1,6 +1,7 @@
 enum SketchStorageBackend {
   drift('drift', 'Drift (SQLite)'),
-  filesystem('filesystem', 'Filesystem');
+  filesystem('filesystem', 'Filesystem'),
+  saf('saf', 'Selected folder');
 
   const SketchStorageBackend(this.storageValue, this.label);
 

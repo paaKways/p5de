@@ -112,6 +112,10 @@
                          "asset":  "assets/default_projects/suacode_africa/sketches/screen_grapher.pde"
                      },
                      {
+                         "name":  "screen_grapher_new",
+                         "asset":  "assets/default_projects/suacode_africa/sketches/screen_grapher_new.pde"
+                     },
+                     {
                          "name":  "Assignment6",
                          "asset":  "assets/default_projects/suacode_africa/sketches/Assignment6.pde"
                      }

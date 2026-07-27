@@ -40,7 +40,28 @@ import {
 } from "@codemirror/view";
 
 let view;
-let changeTimer;
+
+const DEFAULT_EDITOR_FONT_SIZE = 14;
+const MINIMUM_EDITOR_FONT_SIZE = 12;
+const MAXIMUM_EDITOR_FONT_SIZE = 24;
+
+function normalizeFontSize(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_EDITOR_FONT_SIZE;
+  }
+  return Math.min(
+    MAXIMUM_EDITOR_FONT_SIZE,
+    Math.max(MINIMUM_EDITOR_FONT_SIZE, Math.round(parsed)),
+  );
+}
+
+function setFontSize(fontSize) {
+  document.documentElement.style.setProperty(
+    "--p5de-editor-font-size",
+    `${normalizeFontSize(fontSize)}px`,
+  );
+}
 
 function languageExtension(language) {
   if (language === "processing_java") {
@@ -193,6 +214,7 @@ function createEditor(options) {
   const mount = document.getElementById("editor");
   const code = options.code || "";
   const language = options.language || "p5js";
+  setFontSize(options.fontSize);
 
   try {
     if (view) {
@@ -226,8 +248,7 @@ function createEditor(options) {
           EditorView.lineWrapping,
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
-              window.clearTimeout(changeTimer);
-              changeTimer = window.setTimeout(notifyCodeChanged, 120);
+              notifyCodeChanged();
             }
             if (update.selectionSet) {
               notifyCursor();
@@ -332,6 +353,7 @@ window.P5deEditor = {
   insertText,
   runCommand,
   setCode,
+  setFontSize,
 };
 
 function normalizeHostMessage(raw) {
@@ -361,6 +383,9 @@ function handleHostMessage(raw) {
   }
   if (data.command === "focus") {
     focus();
+  }
+  if (data.command === "setFontSize") {
+    setFontSize(payload.fontSize);
   }
 }
 

@@ -10,7 +10,11 @@ enum RuntimePreviewImplementation {
   static RuntimePreviewImplementation fromStorageValue(String? value) {
     return RuntimePreviewImplementation.values.firstWhere(
       (implementation) => implementation.storageValue == value,
-      orElse: () => RuntimePreviewImplementation.standard,
+      orElse: () => defaultRuntimePreviewImplementation,
     );
   }
 }
+
+/// Change this constant to restore the standard preview without removing it.
+const defaultRuntimePreviewImplementation =
+    RuntimePreviewImplementation.fullscreenPhysical;

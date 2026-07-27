@@ -10,14 +10,14 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  test('runtime preview implementation defaults to standard', () {
+  test('runtime preview implementation defaults to full-screen physical', () {
     expect(
       RuntimePreviewImplementation.fromStorageValue(null),
-      RuntimePreviewImplementation.standard,
+      RuntimePreviewImplementation.fullscreenPhysical,
     );
     expect(
       RuntimePreviewImplementation.fromStorageValue('unknown'),
-      RuntimePreviewImplementation.standard,
+      RuntimePreviewImplementation.fullscreenPhysical,
     );
   });
 
@@ -26,16 +26,16 @@ void main() {
 
     expect(
       await store.loadRuntimePreviewImplementation(),
-      RuntimePreviewImplementation.standard,
+      RuntimePreviewImplementation.fullscreenPhysical,
     );
 
     await store.saveRuntimePreviewImplementation(
-      RuntimePreviewImplementation.fullscreenPhysical,
+      RuntimePreviewImplementation.standard,
     );
 
     expect(
       await store.loadRuntimePreviewImplementation(),
-      RuntimePreviewImplementation.fullscreenPhysical,
+      RuntimePreviewImplementation.standard,
     );
   });
 }

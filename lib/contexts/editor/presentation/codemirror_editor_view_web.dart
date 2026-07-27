@@ -11,6 +11,7 @@ class CodeMirrorEditorView extends StatefulWidget {
   const CodeMirrorEditorView({
     required this.code,
     required this.language,
+    required this.fontSize,
     required this.onChanged,
     required this.onCursorChanged,
     required this.onReady,
@@ -19,6 +20,7 @@ class CodeMirrorEditorView extends StatefulWidget {
 
   final String code;
   final String language;
+  final int fontSize;
   final ValueChanged<String> onChanged;
   final void Function(int line, int column) onCursorChanged;
   final VoidCallback onReady;
@@ -81,6 +83,10 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
     _postCommand('focus', const {});
   }
 
+  Future<void> setFontSize(int fontSize) async {
+    _postCommand('setFontSize', {'fontSize': fontSize});
+  }
+
   Future<void> setPointerEventsEnabled(bool enabled) async {
     _iframe.style.pointerEvents = enabled ? 'auto' : 'none';
   }
@@ -89,6 +95,7 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
     _postCommand('createEditor', {
       'code': widget.code,
       'language': widget.language,
+      'fontSize': widget.fontSize,
     });
   }
 
@@ -169,6 +176,14 @@ class CodeMirrorEditorViewState extends State<CodeMirrorEditorView> {
       }
     }
     return const {};
+  }
+
+  @override
+  void didUpdateWidget(CodeMirrorEditorView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.fontSize != widget.fontSize) {
+      setFontSize(widget.fontSize);
+    }
   }
 
   @override

@@ -15,6 +15,7 @@ import 'package:p5de/contexts/sketch_catalog/application/list_favorite_sketches.
 import 'package:p5de/contexts/sketch_catalog/application/list_project_sketches.dart';
 import 'package:p5de/contexts/sketch_catalog/application/list_projects.dart';
 import 'package:p5de/contexts/sketch_catalog/application/list_sketches.dart';
+import 'package:p5de/contexts/sketch_catalog/application/project_templates.dart';
 import 'package:p5de/contexts/sketch_catalog/application/rename_project.dart';
 import 'package:p5de/contexts/sketch_catalog/application/rename_sketch.dart';
 import 'package:p5de/contexts/sketch_catalog/application/search_project_sketches.dart';
@@ -25,6 +26,7 @@ import 'package:p5de/contexts/sketch_catalog/application/toggle_project_sketch_f
 import 'package:p5de/contexts/sketch_catalog/application/toggle_sketch_favorite.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/project_repository.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
+import 'package:p5de/contexts/sketch_catalog/infrastructure/saf_directory_bridge.dart';
 import 'package:p5de/shared/clock.dart';
 import 'package:p5de/shared/id_generator.dart';
 
@@ -33,6 +35,7 @@ class AppDependencies {
     required this.clock,
     required this.idGenerator,
     required this.storageBackend,
+    required this.safDirectoryBridge,
     required this.developerSettingsStore,
     required this.telemetry,
     required this.sketchRepository,
@@ -58,6 +61,7 @@ class AppDependencies {
   final Clock clock;
   final IdGenerator idGenerator;
   final SketchStorageBackend storageBackend;
+  final SafDirectoryBridge? safDirectoryBridge;
   final DeveloperSettingsStore developerSettingsStore;
   final AppTelemetry telemetry;
   final SketchRepository sketchRepository;
@@ -83,13 +87,31 @@ class AppDependencies {
   static Future<AppDependencies> bootstrap({
     AppTelemetry telemetry = const NoopAppTelemetry(),
   }) async {
-    const storageBackend = SketchStorageBackend.filesystem;
-    final hasExistingInstallEvidence = await sketch_repository_factory
-        .hasPersistedSketchCatalogStorage(storageBackend: storageBackend);
+    final storageBackend = sketch_repository_factory
+        .defaultSketchStorageBackend();
     final dependencies = AppDependencies.forStorageBackend(
       telemetry: telemetry,
       storageBackend: storageBackend,
     );
+    if (storageBackend == SketchStorageBackend.saf) {
+      try {
+        final selectedDirectory = await dependencies.safDirectoryBridge
+            ?.getSelectedDirectory();
+        if (selectedDirectory != null) {
+          await dependencies.initializeSelectedDirectory();
+        }
+      } catch (error, stackTrace) {
+        await telemetry.recordError(
+          error,
+          stackTrace,
+          reason: 'selected_directory_bootstrap',
+        );
+      }
+      return dependencies;
+    }
+
+    final hasExistingInstallEvidence = await sketch_repository_factory
+        .hasPersistedSketchCatalogStorage(storageBackend: storageBackend);
     try {
       await SeedDefaultProjects(
         createProject: dependencies.createProject,
@@ -107,6 +129,26 @@ class AppDependencies {
     return dependencies;
   }
 
+  Future<void> initializeSelectedDirectory() async {
+    if (storageBackend != SketchStorageBackend.saf) {
+      return;
+    }
+    if ((await sketchRepository.list()).isNotEmpty ||
+        (await projectRepository.list()).isNotEmpty) {
+      return;
+    }
+    try {
+      await createProject(
+        name:
+            ProjectTemplate.suacodeAfrica.defaultProjectName ??
+            ProjectTemplate.suacodeAfrica.label,
+        template: ProjectTemplate.suacodeAfrica,
+      );
+    } on DuplicateProjectNameException {
+      // The selected directory was populated between the initial scan and seed.
+    }
+  }
+
   factory AppDependencies.forStorageBackend({
     required SketchStorageBackend storageBackend,
     AppTelemetry telemetry = const NoopAppTelemetry(),
@@ -114,6 +156,9 @@ class AppDependencies {
     final clock = SystemClock();
     final idGenerator = UuidV4Generator();
     const developerSettingsStore = DeveloperSettingsStore();
+    final safDirectoryBridge = storageBackend == SketchStorageBackend.saf
+        ? const SafDirectoryBridge()
+        : null;
     final sketchRepository = sketch_repository_factory.createSketchRepository(
       storageBackend: storageBackend,
     );
@@ -130,6 +175,7 @@ class AppDependencies {
       clock: clock,
       idGenerator: idGenerator,
       storageBackend: storageBackend,
+      safDirectoryBridge: safDirectoryBridge,
       developerSettingsStore: developerSettingsStore,
       telemetry: telemetry,
       sketchRepository: sketchRepository,

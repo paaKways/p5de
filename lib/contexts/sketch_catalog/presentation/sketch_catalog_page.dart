@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:p5de/app/di/developer_settings_store.dart';
 import 'package:p5de/app/telemetry/app_telemetry.dart';
 import 'package:p5de/contexts/editor/presentation/editor_page.dart';
 import 'package:p5de/contexts/runtime_preview/domain/runtime_preview_implementation.dart';
@@ -23,8 +22,6 @@ import 'package:p5de/shared/clock.dart';
 import 'package:p5de/shared/id_generator.dart';
 import 'package:p5de/shared/updated_at_formatter.dart';
 
-enum _CatalogDebugAction { developerSettings }
-
 class SketchCatalogPage extends StatefulWidget {
   const SketchCatalogPage({
     required this.sketchRepository,
@@ -33,7 +30,6 @@ class SketchCatalogPage extends StatefulWidget {
     required this.idGenerator,
     required this.clock,
     this.exporter,
-    this.developerSettingsStore = const DeveloperSettingsStore(),
     this.telemetry = const NoopAppTelemetry(),
     super.key,
   });
@@ -44,7 +40,6 @@ class SketchCatalogPage extends StatefulWidget {
   final IdGenerator idGenerator;
   final Clock clock;
   final SketchCatalogExporter? exporter;
-  final DeveloperSettingsStore developerSettingsStore;
   final AppTelemetry telemetry;
 
   @override
@@ -62,9 +57,6 @@ class _SketchCatalogPageState extends State<SketchCatalogPage> {
   final Set<_SelectedSketchKey> _selectedSketches = <_SelectedSketchKey>{};
   bool _exporting = false;
   bool _deletingSelection = false;
-  RuntimePreviewImplementation _runtimePreviewImplementation =
-      RuntimePreviewImplementation.standard;
-
   bool get _selectionMode => _selectedSketches.isNotEmpty;
   bool get _selectionBusy => _exporting || _deletingSelection;
 
@@ -72,18 +64,6 @@ class _SketchCatalogPageState extends State<SketchCatalogPage> {
   void initState() {
     super.initState();
     unawaited(telemetry.setCurrentScreen('catalog'));
-    unawaited(_loadDeveloperSettings());
-  }
-
-  Future<void> _loadDeveloperSettings() async {
-    final implementation = await widget.developerSettingsStore
-        .loadRuntimePreviewImplementation();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _runtimePreviewImplementation = implementation;
-    });
   }
 
   @override
@@ -374,25 +354,6 @@ class _SketchCatalogPageState extends State<SketchCatalogPage> {
             icon: const Icon(Icons.cleaning_services_outlined),
             onPressed: () => _clearWebData(context),
           ),
-        if (kDebugMode)
-          PopupMenuButton<_CatalogDebugAction>(
-            key: const Key('catalog_debug_overflow'),
-            tooltip: 'Developer options',
-            icon: const Icon(Icons.more_vert),
-            onSelected: (action) {
-              switch (action) {
-                case _CatalogDebugAction.developerSettings:
-                  unawaited(_showDeveloperSettings(context));
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem<_CatalogDebugAction>(
-                key: Key('catalog_developer_settings'),
-                value: _CatalogDebugAction.developerSettings,
-                child: Text('Developer settings'),
-              ),
-            ],
-          ),
         const SizedBox(width: 6),
       ],
     );
@@ -439,64 +400,6 @@ class _SketchCatalogPageState extends State<SketchCatalogPage> {
               ),
         const SizedBox(width: 6),
       ],
-    );
-  }
-
-  Future<void> _showDeveloperSettings(BuildContext context) async {
-    var selectedImplementation = _runtimePreviewImplementation;
-    final nextImplementation = await showDialog<RuntimePreviewImplementation>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              key: const Key('developer_settings_dialog'),
-              title: const Text('Developer settings'),
-              content: SwitchListTile(
-                key: const Key('developer_runtime_preview_toggle'),
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Full-screen physical runtime preview'),
-                subtitle: const Text(
-                  'Uses the experimental no-controls Processing Java preview.',
-                ),
-                value:
-                    selectedImplementation ==
-                    RuntimePreviewImplementation.fullscreenPhysical,
-                onChanged: (enabled) {
-                  setDialogState(() {
-                    selectedImplementation = enabled
-                        ? RuntimePreviewImplementation.fullscreenPhysical
-                        : RuntimePreviewImplementation.standard;
-                  });
-                },
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: () =>
-                      Navigator.of(dialogContext).pop(selectedImplementation),
-                  child: const Text('Done'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (nextImplementation == null ||
-        nextImplementation == _runtimePreviewImplementation) {
-      return;
-    }
-
-    setState(() {
-      _runtimePreviewImplementation = nextImplementation;
-    });
-    await widget.developerSettingsStore.saveRuntimePreviewImplementation(
-      nextImplementation,
     );
   }
 
@@ -767,7 +670,7 @@ class _SketchCatalogPageState extends State<SketchCatalogPage> {
           sketchRepository: sketchRepository,
           clock: clock,
           telemetry: telemetry,
-          runtimePreviewImplementation: _runtimePreviewImplementation,
+          runtimePreviewImplementation: defaultRuntimePreviewImplementation,
         ),
       ),
     );
@@ -793,7 +696,7 @@ class _SketchCatalogPageState extends State<SketchCatalogPage> {
           idGenerator: idGenerator,
           exporter: widget.exporter,
           telemetry: telemetry,
-          runtimePreviewImplementation: _runtimePreviewImplementation,
+          runtimePreviewImplementation: defaultRuntimePreviewImplementation,
         ),
       ),
     );
@@ -828,7 +731,7 @@ class _SketchCatalogPageState extends State<SketchCatalogPage> {
           initialSketchId: match.sketch.id,
           exporter: widget.exporter,
           telemetry: telemetry,
-          runtimePreviewImplementation: _runtimePreviewImplementation,
+          runtimePreviewImplementation: defaultRuntimePreviewImplementation,
         ),
       ),
     );

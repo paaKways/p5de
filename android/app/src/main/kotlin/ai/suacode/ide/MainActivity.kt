@@ -14,9 +14,12 @@ import java.io.File
 class MainActivity : FlutterActivity() {
     private val channelName = "ai.suacode.ide/user_visible_sketches"
     private val publicRootLabel = "Download/SuaCode IDE/sketches"
+    private lateinit var safDirectoryChannel: SafDirectoryChannel
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        safDirectoryChannel = SafDirectoryChannel(this)
+        safDirectoryChannel.attach(flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -40,6 +43,16 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    @Deprecated("Deprecated in Android")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        if (::safDirectoryChannel.isInitialized &&
+            safDirectoryChannel.onActivityResult(requestCode, resultCode, data)
+        ) {
+            return
+        }
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     private fun syncSketchesDirectory(sourceRoot: File) {
