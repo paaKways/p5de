@@ -56,7 +56,7 @@ class _AppSplashGateState extends State<AppSplashGate> {
 class SuaCodeSplashScreen extends StatelessWidget {
   const SuaCodeSplashScreen({super.key});
 
-  static const String logoAsset = 'assets/images/suacode-icon-500.png';
+  static const String logoAsset = 'assets/images/suacode-ide-logo.png';
 
   @override
   Widget build(BuildContext context) {

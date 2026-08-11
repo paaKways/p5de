@@ -9,6 +9,14 @@ void main() {
     expect(find.text('SuaCode IDE'), findsOneWidget);
     expect(find.byType(Image), findsOneWidget);
     expect(
+      (tester.widget<Image>(find.byType(Image)).image as AssetImage).assetName,
+      SuaCodeSplashScreen.logoAsset,
+    );
+    expect(
+      SuaCodeSplashScreen.logoAsset,
+      'assets/images/suacode-ide-logo.png',
+    );
+    expect(
       tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
       const Color(0xFFF7FBF6),
     );
