@@ -50,6 +50,52 @@ void main() {
     expect(sketches.single.code, 'void setup() {}');
     expect(bridge.files, contains('External/.p5de.json'));
   });
+
+  test(
+    'reads Processing files when Android appended a txt extension',
+    () async {
+      final bridge = _MemorySafDirectoryBridge();
+      await bridge.createDirectory('Course/Graph');
+      await bridge.writeText('Course/Graph/Graph.pde.txt', 'void setup() {}');
+      await bridge.writeText(
+        'Course/Graph/.p5de.json',
+        '{"id":"graph","sourceFileName":"Graph.pde",'
+            '"createdAt":10,"updatedAt":20}',
+      );
+      final store = SafCatalogStore(bridge: bridge);
+      final project = (await store.listProjects()).single;
+
+      final sketches = await store.listProjectSketches(project.id);
+
+      expect(sketches, hasLength(1));
+      expect(sketches.single.name.value, 'Graph');
+      expect(sketches.single.language, SketchLanguage.processingJava);
+      expect(sketches.single.code, 'void setup() {}');
+    },
+  );
+
+  test(
+    'reuses the project path and reads sketch folders concurrently',
+    () async {
+      final bridge = _MemorySafDirectoryBridge(
+        delay: const Duration(milliseconds: 5),
+      );
+      final store = SafCatalogStore(bridge: bridge);
+      final project = await store.createProject('Course');
+      await store.createProjectSketches(project.id, [
+        _sketch(id: 'one', name: 'One', code: '1'),
+        _sketch(id: 'two', name: 'Two', code: '2'),
+        _sketch(id: 'three', name: 'Three', code: '3'),
+      ]);
+      bridge.resetReadMetrics();
+
+      final sketches = await store.listProjectSketches(project.id);
+
+      expect(sketches, hasLength(3));
+      expect(bridge.rootListCount, 0);
+      expect(bridge.maxConcurrentReads, greaterThan(1));
+    },
+  );
 }
 
 Sketch _sketch({
@@ -68,12 +114,34 @@ Sketch _sketch({
 }
 
 class _MemorySafDirectoryBridge extends SafDirectoryBridge {
+  _MemorySafDirectoryBridge({this.delay = Duration.zero});
+
+  final Duration delay;
   final directories = <String>{''};
   final files = <String, String>{};
   var _clock = 1;
+  var _concurrentReads = 0;
+  var maxConcurrentReads = 0;
+  var rootListCount = 0;
+
+  void resetReadMetrics() {
+    _concurrentReads = 0;
+    maxConcurrentReads = 0;
+    rootListCount = 0;
+  }
 
   @override
   Future<List<SafDocumentEntry>> list(String path) async {
+    if (path.isEmpty) {
+      rootListCount++;
+    }
+    _concurrentReads++;
+    if (_concurrentReads > maxConcurrentReads) {
+      maxConcurrentReads = _concurrentReads;
+    }
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
     final prefix = path.isEmpty ? '' : '$path/';
     final entries = <SafDocumentEntry>[];
     for (final directory in directories) {
@@ -96,11 +164,23 @@ class _MemorySafDirectoryBridge extends SafDirectoryBridge {
       }
       entries.add(_entry(file, isDirectory: false));
     }
+    _concurrentReads--;
     return entries;
   }
 
   @override
-  Future<String> readText(String path) async => files[path]!;
+  Future<String> readText(String path) async {
+    _concurrentReads++;
+    if (_concurrentReads > maxConcurrentReads) {
+      maxConcurrentReads = _concurrentReads;
+    }
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
+    final content = files[path]!;
+    _concurrentReads--;
+    return content;
+  }
 
   @override
   Future<void> writeText(

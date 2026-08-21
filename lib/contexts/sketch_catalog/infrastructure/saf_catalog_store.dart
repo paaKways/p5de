@@ -15,6 +15,7 @@ class SafCatalogStore {
   static const _metadataFileName = '.p5de.json';
 
   final SafDirectoryBridge _bridge;
+  final Map<String, String> _projectPaths = <String, String>{};
 
   Future<List<Sketch>> listStandaloneSketches({String? query}) async {
     final sketches = <Sketch>[];
@@ -75,6 +76,7 @@ class SafCatalogStore {
         continue;
       }
       final project = await _projectFromEntry(entry);
+      _projectPaths[project.id] = entry.path;
       if (normalizedQuery == null ||
           normalizedQuery.isEmpty ||
           project.name.normalized.contains(normalizedQuery)) {
@@ -93,7 +95,9 @@ class SafCatalogStore {
     final path = _folderNameFor(name);
     await _bridge.createDirectory(path);
     final entry = await _entryAtPath(path);
-    return _projectFromEntry(entry);
+    final project = await _projectFromEntry(entry);
+    _projectPaths[project.id] = path;
+    return project;
   }
 
   Future<void> renameProject(String projectId, String rawName) async {
@@ -106,9 +110,13 @@ class SafCatalogStore {
       throw DuplicateProjectNameException();
     }
     final folderName = _folderNameFor(name);
+    var targetPath = path;
     if (_nameFromPath(path) != folderName) {
-      await _bridge.rename(path, folderName);
+      targetPath = await _bridge.rename(path, folderName);
     }
+    _projectPaths
+      ..remove(projectId)
+      ..[_projectIdForName(name.value)] = targetPath;
   }
 
   Future<void> deleteProject(String projectId) async {
@@ -117,6 +125,7 @@ class SafCatalogStore {
       throw ProjectNotFoundException();
     }
     await _bridge.delete(path);
+    _projectPaths.remove(projectId);
   }
 
   Future<Project?> findProject(String projectId) async {
@@ -304,16 +313,12 @@ class SafCatalogStore {
     String parentPath, {
     String? query,
   }) async {
-    final sketches = <Sketch>[];
-    for (final entry in await _bridge.list(parentPath)) {
-      if (!entry.isDirectory || entry.name.startsWith('.')) {
-        continue;
-      }
-      final sketch = await _readSketch(entry.path);
-      if (sketch != null) {
-        sketches.add(sketch);
-      }
-    }
+    final directories = (await _bridge.list(
+      parentPath,
+    )).where((entry) => entry.isDirectory && !entry.name.startsWith('.'));
+    final sketches = (await Future.wait(
+      directories.map((entry) => _readSketch(entry.path)),
+    )).whereType<Sketch>().toList(growable: false);
     return _filterAndSortSketches(sketches, query);
   }
 
@@ -379,7 +384,8 @@ class SafCatalogStore {
       final canonicalEntry = _firstWhereOrNull(
         entries,
         (candidate) =>
-            !candidate.isDirectory && candidate.name == canonicalName,
+            !candidate.isDirectory &&
+            _matchesSourceFileName(candidate.name, canonicalName),
       );
       if (canonicalEntry != null) {
         return canonicalEntry;
@@ -390,7 +396,8 @@ class SafCatalogStore {
       final entry = _firstWhereOrNull(
         entries,
         (candidate) =>
-            !candidate.isDirectory && candidate.name == sourceFileName,
+            !candidate.isDirectory &&
+            _matchesSourceFileName(candidate.name, sourceFileName),
       );
       if (entry != null && _languageForFileName(entry.name) != null) {
         return entry;
@@ -456,9 +463,14 @@ class SafCatalogStore {
   }
 
   Future<String?> _projectPathForId(String projectId) async {
+    final cachedPath = _projectPaths[projectId];
+    if (cachedPath != null) {
+      return cachedPath;
+    }
     for (final entry in await _topLevelDirectories()) {
       if (!await _hasSketchSource(entry.path) &&
           _projectIdForName(entry.name) == projectId) {
+        _projectPaths[projectId] = entry.path;
         return entry.path;
       }
     }
@@ -547,13 +559,22 @@ class SafCatalogStore {
   }
 
   SketchLanguage? _languageForFileName(String fileName) {
-    final normalized = fileName.toLowerCase();
+    var normalized = fileName.toLowerCase();
+    if (normalized.endsWith('.pde.txt')) {
+      normalized = normalized.substring(0, normalized.length - 4);
+    }
     for (final language in SketchLanguage.values) {
       if (normalized.endsWith('.${language.fileExtension.toLowerCase()}')) {
         return language;
       }
     }
     return null;
+  }
+
+  bool _matchesSourceFileName(String actualName, String expectedName) {
+    final actual = actualName.toLowerCase();
+    final expected = expectedName.toLowerCase();
+    return actual == expected || actual == '$expected.txt';
   }
 
   String _folderNameFor(SketchName name) {

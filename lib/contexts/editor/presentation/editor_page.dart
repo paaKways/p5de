@@ -19,6 +19,38 @@ import 'package:p5de/contexts/sketch_catalog/domain/sketch_language.dart';
 import 'package:p5de/contexts/sketch_catalog/domain/sketch_repository.dart';
 import 'package:p5de/shared/clock.dart';
 
+const editorKeyboardShortcutValues = <String>[
+  '\t',
+  ';',
+  ',',
+  '{',
+  '}',
+  '(',
+  ')',
+  '=',
+  '*',
+  '/',
+  '+',
+  '-',
+  '&',
+  '|',
+  '!',
+  '[',
+  ']',
+  '<',
+  '>',
+  '"',
+  "'",
+  r'\',
+  '_',
+  '.',
+  '?',
+  ':',
+  '%',
+  '@',
+  '#',
+];
+
 class EditorPage extends StatefulWidget {
   const EditorPage({
     required this.sketch,
@@ -548,28 +580,23 @@ class _EditorStatus extends StatelessWidget {
   }
 }
 
-class _EditorKeyboardToolbar extends StatelessWidget {
+class _EditorKeyboardToolbar extends StatefulWidget {
   const _EditorKeyboardToolbar({required this.onInsert});
 
   final ValueChanged<String> onInsert;
 
-  static const _shortcuts = [
-    _EditorShortcut(label: ';', value: ';'),
-    _EditorShortcut(label: '(', value: '('),
-    _EditorShortcut(label: ')', value: ')'),
-    _EditorShortcut(label: '{', value: '{'),
-    _EditorShortcut(label: '}', value: '}'),
-    _EditorShortcut(label: '[', value: '['),
-    _EditorShortcut(label: ']', value: ']'),
-    _EditorShortcut(label: '=', value: '='),
-    _EditorShortcut(label: '+', value: '+'),
-    _EditorShortcut(
-      label: 'Tab',
-      value: '\t',
-      width: 104,
-      icon: Icons.keyboard_tab,
-    ),
-  ];
+  @override
+  State<_EditorKeyboardToolbar> createState() => _EditorKeyboardToolbarState();
+}
+
+class _EditorKeyboardToolbarState extends State<_EditorKeyboardToolbar> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -580,82 +607,63 @@ class _EditorKeyboardToolbar extends StatelessWidget {
       ),
       child: SizedBox(
         height: 64,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          itemBuilder: (context, index) {
-            final shortcut = _shortcuts[index];
-            return SizedBox(
-              width: shortcut.width,
-              child: Tooltip(
-                message: shortcut.label == 'Tab'
-                    ? 'Insert tab'
-                    : 'Insert ${shortcut.label}',
-                child: OutlinedButton(
-                  onPressed: () => onInsert(shortcut.value),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF0F172A),
-                    minimumSize: const Size(0, 48),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+        child: RawScrollbar(
+          controller: _scrollController,
+          thumbVisibility: true,
+          trackVisibility: true,
+          interactive: true,
+          scrollbarOrientation: ScrollbarOrientation.bottom,
+          padding: EdgeInsets.zero,
+          thumbColor: const Color(0xFF94A3B8),
+          trackColor: const Color(0xFFE2E8F0),
+          thickness: 3,
+          radius: const Radius.circular(999),
+          trackRadius: const Radius.circular(999),
+          mainAxisMargin: 12,
+          crossAxisMargin: 4,
+          minThumbLength: 36,
+          child: ListView.separated(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(12, 7, 12, 13),
+            itemBuilder: (context, index) {
+              final value = editorKeyboardShortcutValues[index];
+              final label = value == '\t' ? '→' : value;
+              return SizedBox(
+                width: 44,
+                child: Tooltip(
+                  message: value == '\t' ? 'Insert tab' : 'Insert $label',
+                  child: OutlinedButton(
+                    key: Key('editor_character_$index'),
+                    onPressed: () => widget.onInsert(value),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF0F172A),
+                      minimumSize: const Size(0, 44),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      side: const BorderSide(color: Color(0xFFE2E8F0)),
                     ),
-                    side: const BorderSide(color: Color(0xFFE2E8F0)),
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                  child: _ShortcutButtonContent(shortcut: shortcut),
                 ),
-              ),
-            );
-          },
-          separatorBuilder: (context, index) => const SizedBox(width: 8),
-          itemCount: _shortcuts.length,
+              );
+            },
+            separatorBuilder: (context, index) => const SizedBox(width: 6),
+            itemCount: editorKeyboardShortcutValues.length,
+          ),
         ),
       ),
-    );
-  }
-}
-
-class _EditorShortcut {
-  const _EditorShortcut({
-    required this.label,
-    required this.value,
-    this.width = 70,
-    this.icon,
-  });
-
-  final String label;
-  final String value;
-  final double width;
-  final IconData? icon;
-}
-
-class _ShortcutButtonContent extends StatelessWidget {
-  const _ShortcutButtonContent({required this.shortcut});
-
-  final _EditorShortcut shortcut;
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = shortcut.icon;
-    final textStyle = TextStyle(
-      fontFamily: 'monospace',
-      fontSize: icon == null ? 22 : 14,
-      fontWeight: FontWeight.w800,
-    );
-
-    if (icon == null) {
-      return Text(shortcut.label, style: textStyle);
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 18),
-        const SizedBox(width: 4),
-        Text(shortcut.label, style: textStyle),
-      ],
     );
   }
 }

@@ -1,9 +1,14 @@
 package ai.suacode.ide
 
 import android.app.Activity
+import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
 import android.provider.DocumentsContract
+import android.provider.MediaStore
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 import java.io.FileNotFoundException
@@ -14,7 +19,13 @@ class SafDirectoryChannel(private val activity: Activity) {
     private val requestCode = 4817
     private val preferencesName = "p5de_saf_directory"
     private val treeUriKey = "tree_uri"
+    private val defaultDirectoryPath = "SuaCode IDE/sketches"
+    private val bootstrapMarkerName = ".suacode-directory"
+    private val externalStorageProviderAuthority =
+        "com.android.externalstorage.documents"
     private val executor = Executors.newSingleThreadExecutor()
+    private val readExecutor = Executors.newFixedThreadPool(4)
+    private val directoryCache = java.util.concurrent.ConcurrentHashMap<String, Uri>()
     private var pendingPickerResult: MethodChannel.Result? = null
 
     private val resolver
@@ -23,12 +34,12 @@ class SafDirectoryChannel(private val activity: Activity) {
     fun attach(messenger: BinaryMessenger) {
         MethodChannel(messenger, channelName).setMethodCallHandler { call, result ->
             when (call.method) {
-                "getDirectory" -> runIo(result) { selectedDirectoryPayload() }
+                "getDirectory" -> runReadIo(result) { selectedDirectoryPayload() }
                 "pickDirectory" -> pickDirectory(result)
-                "list" -> runIo(result) {
+                "list" -> runReadIo(result) {
                     listChildren(call.argument<String>("path").orEmpty())
                 }
-                "readText" -> runIo(result) {
+                "readText" -> runReadIo(result) {
                     readText(requiredPath(call.argument<String>("path")))
                 }
                 "writeText" -> runIo(result) {
@@ -53,7 +64,7 @@ class SafDirectoryChannel(private val activity: Activity) {
                     delete(requiredPath(call.argument<String>("path")))
                     null
                 }
-                "exists" -> runIo(result) {
+                "exists" -> runReadIo(result) {
                     resolve(requiredPath(call.argument<String>("path"))) != null
                 }
                 else -> result.notImplemented()
@@ -78,7 +89,17 @@ class SafDirectoryChannel(private val activity: Activity) {
                 (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             resolver.takePersistableUriPermission(uri, flags)
             preferences().edit().putString(treeUriKey, uri.toString()).apply()
-            runIo(pending) { selectedDirectoryPayload() }
+            directoryCache.clear()
+            runIo(pending) {
+                try {
+                    removeBootstrapMarkerIfSelected(uri)
+                } catch (_: Exception) {
+                    // The marker is hidden and ignored by the catalog, so a
+                    // provider-specific cleanup failure must not reject a
+                    // successfully granted directory permission.
+                }
+                selectedDirectoryPayload()
+            }
         } catch (error: Exception) {
             pending.error("directory_permission_failed", error.message, null)
         }
@@ -91,13 +112,90 @@ class SafDirectoryChannel(private val activity: Activity) {
             return
         }
         pendingPickerResult = result
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
-            addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION)
+        executor.execute {
+            val initialUri = try {
+                prepareDefaultDirectoryInitialUri()
+            } catch (_: Exception) {
+                null
+            }
+            activity.runOnUiThread {
+                if (pendingPickerResult !== result) {
+                    return@runOnUiThread
+                }
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                    addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && initialUri != null) {
+                        putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri)
+                    }
+                }
+                try {
+                    activity.startActivityForResult(intent, requestCode)
+                } catch (error: Exception) {
+                    pendingPickerResult = null
+                    result.error("directory_picker_failed", error.message, null)
+                }
+            }
         }
-        activity.startActivityForResult(intent, requestCode)
+    }
+
+    private fun prepareDefaultDirectoryInitialUri(): Uri? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return null
+        }
+
+        val collection = MediaStore.Downloads.getContentUri(
+            MediaStore.VOLUME_EXTERNAL_PRIMARY,
+        )
+        val relativePath = "${Environment.DIRECTORY_DOWNLOADS}/$defaultDirectoryPath/"
+        findBootstrapMarker(collection, relativePath)
+            ?: resolver.insert(
+                collection,
+                ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, bootstrapMarkerName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+                },
+            )
+            ?: return null
+
+        // ExternalStorageProvider is the local-files provider used by Android's
+        // DocumentsUI. If an OEM does not expose it, DocumentsUI safely falls
+        // back to its normal starting location.
+        return DocumentsContract.buildDocumentUri(
+            externalStorageProviderAuthority,
+            "primary:${relativePath.trimEnd('/')}",
+        )
+    }
+
+    private fun removeBootstrapMarkerIfSelected(treeUri: Uri) {
+        val expectedDocumentId =
+            "primary:${Environment.DIRECTORY_DOWNLOADS}/$defaultDirectoryPath"
+        if (DocumentsContract.getTreeDocumentId(treeUri) != expectedDocumentId) {
+            return
+        }
+        val root = rootDocumentUri(treeUri)
+        val marker = findChild(root, bootstrapMarkerName) ?: return
+        DocumentsContract.deleteDocument(resolver, marker)
+    }
+
+    private fun findBootstrapMarker(collection: Uri, relativePath: String): Uri? {
+        val projection = arrayOf(MediaStore.MediaColumns._ID)
+        val selection =
+            "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND " +
+                "${MediaStore.MediaColumns.RELATIVE_PATH} = ?"
+        val selectionArgs = arrayOf(bootstrapMarkerName, relativePath)
+        resolver.query(collection, projection, selection, selectionArgs, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val id = cursor.getLong(
+                    cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID),
+                )
+                return ContentUris.withAppendedId(collection, id)
+            }
+        }
+        return null
     }
 
     private fun selectedDirectoryPayload(): Map<String, Any?>? {
@@ -184,21 +282,50 @@ class SafDirectoryChannel(private val activity: Activity) {
         val fileName = segments.last()
         val parentPath = segments.dropLast(1).joinToString("/")
         val parent = ensureDirectory(parentPath)
+        val providerTextName = if (
+            mimeType == "text/plain" && !fileName.endsWith(".txt", ignoreCase = true)
+        ) {
+            "$fileName.txt"
+        } else {
+            null
+        }
         val existing = findChild(parent, fileName)
-        val document = existing ?: DocumentsContract.createDocument(
+            ?: providerTextName?.let { findChild(parent, it) }
+        var document = existing ?: DocumentsContract.createDocument(
             resolver,
             parent,
             mimeType,
             fileName,
         ) ?: throw IllegalStateException("Unable to create $path")
+
+        // ExternalStorageProvider may append `.txt` to an unfamiliar source
+        // extension (notably Processing's `.pde`) when the MIME type is
+        // text/plain. Keep the requested source filename stable and also
+        // repair files created by older app versions when they are rewritten.
+        if (queryDocument(document)?.name != fileName) {
+            document = DocumentsContract.renameDocument(resolver, document, fileName)
+                ?: throw IllegalStateException("Unable to preserve filename for $path")
+        }
         resolver.openOutputStream(document, "wt")?.bufferedWriter(Charsets.UTF_8)?.use {
             it.write(content)
         } ?: throw FileNotFoundException(path)
     }
 
     private fun ensureDirectory(path: String): Uri {
+        val cached = directoryCache[path]
+        if (cached != null) {
+            return cached
+        }
         var current = rootDocumentUri(requiredTreeUri())
+        directoryCache.putIfAbsent("", current)
+        var currentPath = ""
         for (segment in pathSegments(path, allowEmpty = true)) {
+            currentPath = joinPath(currentPath, segment)
+            val cachedChild = directoryCache[currentPath]
+            if (cachedChild != null) {
+                current = cachedChild
+                continue
+            }
             val existing = findChild(current, segment)
             current = if (existing != null) {
                 val info = queryDocument(existing)
@@ -214,16 +341,20 @@ class SafDirectoryChannel(private val activity: Activity) {
                     segment,
                 ) ?: throw IllegalStateException("Unable to create $segment")
             }
+            directoryCache[currentPath] = current
         }
         return current
     }
 
     private fun rename(path: String, newName: String): String {
         val document = resolve(path) ?: throw FileNotFoundException(path)
-        DocumentsContract.renameDocument(resolver, document, newName)
+        val renamedDocument = DocumentsContract.renameDocument(resolver, document, newName)
             ?: throw IllegalStateException("Unable to rename $path")
         val parentPath = pathSegments(path).dropLast(1).joinToString("/")
-        return joinPath(parentPath, newName)
+        val targetPath = joinPath(parentPath, newName)
+        invalidateDirectoryCache(path)
+        directoryCache[targetPath] = renamedDocument
+        return targetPath
     }
 
     private fun delete(path: String) {
@@ -231,14 +362,32 @@ class SafDirectoryChannel(private val activity: Activity) {
         if (!DocumentsContract.deleteDocument(resolver, document)) {
             throw IllegalStateException("Unable to delete $path")
         }
+        invalidateDirectoryCache(path)
     }
 
     private fun resolve(path: String): Uri? {
+        val cached = directoryCache[path]
+        if (cached != null) {
+            return cached
+        }
         var current = rootDocumentUri(requiredTreeUri())
+        directoryCache.putIfAbsent("", current)
+        var currentPath = ""
         for (segment in pathSegments(path, allowEmpty = true)) {
+            currentPath = joinPath(currentPath, segment)
+            val cachedChild = directoryCache[currentPath]
+            if (cachedChild != null) {
+                current = cachedChild
+                continue
+            }
             current = findChild(current, segment) ?: return null
+            directoryCache[currentPath] = current
         }
         return current
+    }
+
+    private fun invalidateDirectoryCache(path: String) {
+        directoryCache.keys.removeAll { key -> key == path || key.startsWith("$path/") }
     }
 
     private fun findChild(parent: Uri, name: String): Uri? {
@@ -353,7 +502,19 @@ class SafDirectoryChannel(private val activity: Activity) {
         activity.getSharedPreferences(preferencesName, Activity.MODE_PRIVATE)
 
     private fun runIo(result: MethodChannel.Result, operation: () -> Any?) {
-        executor.execute {
+        runOnExecutor(executor, result, operation)
+    }
+
+    private fun runReadIo(result: MethodChannel.Result, operation: () -> Any?) {
+        runOnExecutor(readExecutor, result, operation)
+    }
+
+    private fun runOnExecutor(
+        targetExecutor: java.util.concurrent.Executor,
+        result: MethodChannel.Result,
+        operation: () -> Any?,
+    ) {
+        targetExecutor.execute {
             try {
                 val value = operation()
                 activity.runOnUiThread { result.success(value) }

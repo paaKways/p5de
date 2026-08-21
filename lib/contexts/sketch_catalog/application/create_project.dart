@@ -10,7 +10,7 @@ enum ProjectCreationStage {
   creatingProject,
   loadingTemplate,
   preparingSketches,
-  syncingProject,
+  savingSketches,
   complete,
 }
 
@@ -37,13 +37,13 @@ class ProjectCreationProgress {
       case ProjectCreationStage.creatingProject:
         return 'Creating folder...';
       case ProjectCreationStage.loadingTemplate:
-        return 'Loading content...';
+        return 'Loading folder content...';
       case ProjectCreationStage.preparingSketches:
-        return 'Preparing $completed of $total sketches...';
-      case ProjectCreationStage.syncingProject:
-        return 'Syncing project files...';
+        return 'Loading sketch $completed of $total...';
+      case ProjectCreationStage.savingSketches:
+        return 'Adding $total sketches to folder...';
       case ProjectCreationStage.complete:
-        return 'Project ready.';
+        return 'Folder ready.';
     }
   }
 }
@@ -77,59 +77,68 @@ class CreateProject {
       ),
     );
     final project = await _repository.create(name: name);
-    onProgress?.call(
-      const ProjectCreationProgress(
-        stage: ProjectCreationStage.loadingTemplate,
-      ),
-    );
-    final bundledTemplate = await BundledProjectTemplate.load(
-      template,
-      bundle: _bundle,
-    );
-    if (bundledTemplate == null) {
+    try {
       onProgress?.call(
-        const ProjectCreationProgress(stage: ProjectCreationStage.complete),
-      );
-      return project;
-    }
-
-    final sketches = <Sketch>[];
-    for (var index = 0; index < bundledTemplate.sketches.length; index++) {
-      final sketchSeed = bundledTemplate.sketches[index];
-      sketches.add(
-        await sketchSeed.toSketch(
-          bundle: _bundle,
-          idGenerator: _idGenerator,
-          clock: _clock,
-          language: bundledTemplate.language,
-          offset: index,
+        const ProjectCreationProgress(
+          stage: ProjectCreationStage.loadingTemplate,
         ),
       );
+      final bundledTemplate = await BundledProjectTemplate.load(
+        template,
+        bundle: _bundle,
+      );
+      if (bundledTemplate == null) {
+        onProgress?.call(
+          const ProjectCreationProgress(stage: ProjectCreationStage.complete),
+        );
+        return project;
+      }
+
+      final sketches = <Sketch>[];
+      for (var index = 0; index < bundledTemplate.sketches.length; index++) {
+        final sketchSeed = bundledTemplate.sketches[index];
+        sketches.add(
+          await sketchSeed.toSketch(
+            bundle: _bundle,
+            idGenerator: _idGenerator,
+            clock: _clock,
+            language: bundledTemplate.language,
+            offset: index,
+          ),
+        );
+        onProgress?.call(
+          ProjectCreationProgress(
+            stage: ProjectCreationStage.preparingSketches,
+            completed: index + 1,
+            total: bundledTemplate.sketches.length,
+          ),
+        );
+      }
+
       onProgress?.call(
         ProjectCreationProgress(
-          stage: ProjectCreationStage.preparingSketches,
-          completed: index + 1,
-          total: bundledTemplate.sketches.length,
+          stage: ProjectCreationStage.savingSketches,
+          completed: sketches.length,
+          total: sketches.length,
         ),
       );
+      await _repository.createSketches(project.id, sketches);
+      onProgress?.call(
+        ProjectCreationProgress(
+          stage: ProjectCreationStage.complete,
+          completed: sketches.length,
+          total: sketches.length,
+        ),
+      );
+
+      return project;
+    } catch (_) {
+      try {
+        await _repository.deleteById(project.id);
+      } catch (_) {
+        // Preserve the original creation error. A cleanup failure is secondary.
+      }
+      rethrow;
     }
-
-    onProgress?.call(
-      ProjectCreationProgress(
-        stage: ProjectCreationStage.syncingProject,
-        completed: sketches.length,
-        total: sketches.length,
-      ),
-    );
-    await _repository.createSketches(project.id, sketches);
-    onProgress?.call(
-      ProjectCreationProgress(
-        stage: ProjectCreationStage.complete,
-        completed: sketches.length,
-        total: sketches.length,
-      ),
-    );
-
-    return project;
   }
 }

@@ -194,7 +194,7 @@ class _DirectorySelectionScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 28),
                   const Text(
-                    'Choose your sketch folder',
+                    'Allow folder access',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.text,
@@ -205,29 +205,14 @@ class _DirectorySelectionScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'This folder becomes the source of truth. SuaCode IDE will '
-                    'read and save sketches there directly—no duplicate mirror.',
+                    'Approve access to the SuaCode IDE sketch folder to '
+                    'continue.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 16,
                       height: 1.5,
                     ),
-                  ),
-                  const SizedBox(height: 28),
-                  const _DirectoryBenefit(
-                    icon: Icons.visibility_outlined,
-                    text: 'Your sketches stay visible in your file manager.',
-                  ),
-                  const SizedBox(height: 12),
-                  const _DirectoryBenefit(
-                    icon: Icons.sync_alt_rounded,
-                    text: 'External edits appear when the catalog refreshes.',
-                  ),
-                  const SizedBox(height: 12),
-                  const _DirectoryBenefit(
-                    icon: Icons.lock_outline_rounded,
-                    text: 'Access is limited to the folder you select.',
                   ),
                   if (errorMessage != null) ...[
                     const SizedBox(height: 20),
@@ -273,7 +258,7 @@ class _DirectorySelectionScreen extends StatelessWidget {
                             )
                           : const Icon(Icons.create_new_folder_outlined),
                       label: Text(
-                        preparing ? 'Preparing folder…' : 'Choose folder',
+                        preparing ? 'Opening folder…' : 'Approve folder access',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -287,47 +272,6 @@ class _DirectorySelectionScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _DirectoryBenefit extends StatelessWidget {
-  const _DirectoryBenefit({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Icon(icon, size: 20, color: AppColors.primary),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 7),
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 15,
-                height: 1.4,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

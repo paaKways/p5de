@@ -72,21 +72,9 @@ class SuaCodeSplashScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 132,
-                  height: 132,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF1E3A5F).withValues(alpha: 0.16),
-                        blurRadius: 30,
-                        offset: const Offset(0, 16),
-                      ),
-                    ],
-                  ),
+                SizedBox(
+                  width: 200,
+                  height: 100,
                   child: Image.asset(logoAsset, fit: BoxFit.contain),
                 ),
                 const SizedBox(height: 24),
